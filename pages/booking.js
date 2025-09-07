@@ -125,7 +125,7 @@ export default function Booking() {
 			  "background 0.2s, color 0.2s, box-shadow 0.2s, cursor 0.2s"
 		  }}
 		>
-		  {isLoading ? "Processing for payment with Stripe" : "Book Now"}
+		  {isLoading ? "Awaiting Stripe for payment" : "Book Now"}
    		</button>
           {error && (
             <div style={{ color: "#f88", marginTop: 8 }}>{error}</div>

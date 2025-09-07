@@ -110,7 +110,17 @@ body, html, #root, .responsive-container {
   background: #666a;
 }
 
+.booking-form input,
+.booking-details,
+.booking-form {
+  box-sizing: border-box;
+}
+
 /* Schedule Table */
+
+.schedule-root {
+  padding-top: 2.5em; /* adjust as needed */
+}
 .schedule-table-wrap {
   margin: 2em auto 0 auto;
   max-width: 600px;

@@ -5,7 +5,8 @@ export default function Document() {
     <Html>
       <Head>
        <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
-      </Head>
+		<link rel="icon" type="image/png" href="/favicon.png" />
+	  </Head>
       <body>
         <Main />
         <NextScript />
