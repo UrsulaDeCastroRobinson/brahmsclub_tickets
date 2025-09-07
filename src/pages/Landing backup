@@ -1,0 +1,67 @@
+import React, { useEffect, useState } from "react";
+import FadeInImage from "../components/FadeInImage";
+import ResponsiveContainer from "../components/ResponsiveContainer";
+import { Link } from "react-router-dom";
+
+const initialQuote = "I'm discovering my voice - and it is majestic.";
+
+const description = (
+  <>
+    <h1 className="club-title">Brahms Club</h1>
+    <h2 className="club-subtitle">
+      The Brahms Club puts on free chamber music concerts in Limehouse, Wapping and the wider Docklands area every Sunday from October through December and March through May featuring works of the Great Man: Johannes Brahms
+    </h2>
+    <div className="club-description">
+      Brahms grew up in the Gängeviertel district of Hamburg; a docklands district with a bustling residential and entertainment area for thousands of dockworker and seafaring families. Brahms's first audiences as a pianist were in the dockside pubs (Animierlokalen) playing popular and folk music. Brahms went on to create sublime music that is often held up as the culmination of Western classical music.<br /><br />
+      <strong><em>
+        "There exists in every era a secret bond between kindred spirits. You who belong together, draw the circle ever tighter, so that the Truth of Art shall burn more brilliantly, diffusing joy and blessings everywhere".
+      </em></strong> - Robert Schumann
+      <br /><br />
+      With the strong historic similarities between the Limehouse and the Gängeviertel district of Hamburg, we think it fitting to bring the "wondrous glimpses of the secret world of spirits" in Brahms' music to the current residents of Limehouse and the wider Docklands area.
+    </div>
+    <Link className="schedule-link" to="/schedule">View Event Schedule</Link>
+  </>
+);
+
+function Landing() {
+  const [showImage, setShowImage] = useState(false);
+  const [showBottomText, setShowBottomText] = useState(false);
+
+  useEffect(() => {
+    // Show image after 2s, fade out text, then move text to bottom
+    const timer1 = setTimeout(() => setShowImage(true), 2000);
+    const timer2 = setTimeout(() => setShowBottomText(true), 4000);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
+
+  return (
+    <ResponsiveContainer>
+      <div className="landing-root">
+        <FadeInImage
+          src="/images/wanderer.jpg"
+          alt="Wanderer above the Sea of Fog"
+          fadeIn={showImage}
+        />
+        {!showBottomText ? (
+          <div className="cover-text">
+            {initialQuote}
+          </div>
+        ) : (
+          <div className="cover-text-bottom">
+            {initialQuote}
+          </div>
+        )}
+        {showBottomText && (
+          <div className="landing-content">
+            {description}
+          </div>
+        )}
+      </div>
+    </ResponsiveContainer>
+  );
+}
+
+export default Landing;

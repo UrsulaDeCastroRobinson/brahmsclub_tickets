@@ -1,0 +1,425 @@
+body, html, #root, .responsive-container {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100vw;
+  font-family: 'Lora', serif;
+  box-sizing: border-box;
+  background: #111;
+}
+.landing-root, .schedule-root {
+  position: relative;
+  min-height: 100vh;
+  color: white;
+  overflow: hidden;
+}
+
+/* Fade in image background */
+.fade-image-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 2s ease;
+  z-index: 1;
+}
+.fade-image-bg.fade-in {
+  opacity: 0.7;
+}
+
+.cover-text {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 2.3em;
+  width: 90vw;
+  text-align: center;
+  z-index: 2;
+  background: rgba(0,0,0,0.1);
+  padding: 1em;
+  border-radius: 0.5em;
+  transition: opacity 1s;
+}
+.cover-text-bottom {
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: transparent;
+  font-size: 1.7em;
+  width: 100vw;
+  text-align: center;
+  z-index: 2;
+  background: rgba(0,0,0,0);
+  padding: 0.3em;
+  border-radius: 0.5em;
+  transition: opacity 1s;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 3;
+  background: rgba(0,0,0,0.1);
+  margin: 1em auto 0 auto;
+  max-width: 800px;
+  padding: 2em 1em 2em 1em;
+  border-radius: 0.7em;
+}
+.club-title {
+  text-align: center;
+  font-size: 2.3em;
+  margin-bottom: 1em;
+  margin-top: 0;
+  letter-spacing: 0.03em;
+}
+.club-subtitle {
+  text-align: center;
+  font-size: 1.3em;
+  margin-bottom: 1em;
+  font-weight: 500;
+}
+.club-description {
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 2em;
+}
+.schedule-link, .back-link {
+  display: block;
+  text-align: center;
+  font-size: 1.1em;
+  color: #fff;
+  background: #333a;
+  padding: 0.6em 1.2em;
+  border-radius: 0.4em;
+  margin: 1.8em auto 0 auto;
+  width: fit-content;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.schedule-link:hover, .back-link:hover {
+  background: #666a;
+}
+
+/* Schedule Table */
+.schedule-table-wrap {
+  margin: 2em auto 0 auto;
+  max-width: 600px;
+  overflow-x: auto;
+}
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+}
+.schedule-table th, .schedule-table td {
+  border: 1px solid #eee2;
+  padding: 0.8em 0.6em;
+  font-size: 1em;
+}
+.schedule-table th {
+  background: #222a;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+.schedule-table tr:nth-child(even) td {
+  background: #222b;
+}
+
+/* Responsive styles */
+@media (max-width: 900px) {
+  .landing-content, .schedule-table-wrap {
+    max-width: 95vw;
+    padding: 1em;
+  }
+}
+@media (max-width: 600px) {
+  .cover-text, .cover-text-bottom {
+    font-size: 1.3em;
+    padding: 0.4em;
+  }
+  .club-title { font-size: 1.5em; }
+  .club-subtitle { font-size: 1em; }
+  .club-description { font-size: 0.95em; }
+  .landing-content { margin-top: 3em; padding: 1em; }
+  .schedule-table th, .schedule-table td { font-size: 0.95em; padding: 0.5em; }
+}
+
+.booking-root {
+  position: relative;
+  min-height: 100vh;
+  color: white;
+  background: rgba(0, 0, 0, 0.88);
+  padding-top: 2em;
+  z-index: 2;
+}
+
+.booking-details {
+  margin: 2em auto 0 auto;
+  max-width: 480px;
+  background: rgba(0,0,0,0.13);
+  border-radius: 0.7em;
+  padding: 2em 1.5em;
+  box-shadow: 0 2px 20px 0 rgba(0,0,0,0.09);
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2em;
+  margin-bottom: 1.5em;
+}
+
+.booking-form label {
+  font-size: 1.1em;
+  margin-bottom: 0.6em;
+  color: #e0e0e0;
+  display: block;
+}
+
+.booking-form input[type="number"] {
+  width: 100%;
+  padding: 0.6em;
+  font-size: 1.1em;
+  border-radius: 0.4em;
+  border: 1px solid #444;
+  background: #222;
+  color: #fff;
+  outline: none;
+  margin-top: 0.4em;
+  margin-bottom: 0.7em;
+  transition: border 0.2s;
+}
+
+.booking-form input[type="number"]:focus {
+  border: 1.5px solid #7d5fff;
+}
+
+.booking-btn {
+  padding: 0.8em 1.5em;
+  font-size: 1.15em;
+  background: linear-gradient(90deg, #7d5fff 40%, #4e54c8 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.4em;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px 0 rgba(100,100,180,0.14);
+}
+
+.booking-btn:hover {
+  background: linear-gradient(90deg, #4e54c8 40%, #7d5fff 100%);
+  box-shadow: 0 2px 12px 0 rgba(100,100,180,0.18);
+}
+
+.booking-charity-note, .booking-confirmation {
+  font-size: 1.05em;
+  margin-top: 1.5em;
+  background: #222a;
+  border-radius: 0.5em;
+  padding: 1em 0.9em;
+  color: white;
+}
+
+.booking-charity-note em {
+  font-style: italic;
+  color: white;
+}
+
+.booking-confirmation strong {
+  color: #7d5fff;
+  font-size: 1.14em;
+}
+
+/* Book Button in Schedule Table */
+.book-btn {
+  padding: 0.45em 1.2em;
+  font-size: 1em;
+  background: linear-gradient(90deg, #7d5fff 40%, #4e54c8 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.4em;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px 0 rgba(100,100,180,0.11);
+  margin: 0.1em 0.1em;
+}
+
+.book-btn:hover {
+  background: linear-gradient(90deg, #4e54c8 40%, #7d5fff 100%);
+  box-shadow: 0 2px 8px 0 rgba(100,100,180,0.21);
+}
+
+/* Responsive for Booking */
+@media (max-width: 600px) {
+  .booking-details {
+    padding: 1em 0.5em;
+    max-width: 98vw;
+  }
+  .booking-form input[type="number"] {
+    font-size: 1em;
+    padding: 0.5em;
+  }
+  .booking-btn {
+    font-size: 1em;
+    padding: 0.6em 1em;
+  }
+  .booking-charity-note, .booking-confirmation {
+    font-size: 0.95em;
+    padding: 0.6em 0.5em;
+  }
+  
+  .booking-charity-note a,
+.booking-confirmation a {
+  color: #fff;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+.booking-charity-note a:hover,
+.booking-confirmation a:hover {
+  color: #7d5fff; /* Optional: purple on hover, or use #ccc for light gray */
+}
+
+.booking-root a {
+  color: #fff !important;
+  text-decoration: underline;
+}
+.booking-root a:hover {
+  color: #7d5fff !important; /* Optional: purple on hover */
+}
+
+
+.club-title, .club-subtitle, .schedule-link, .back-link, .book-btn, .booking-btn {
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.landing-content, .club-description, .booking-details, .booking-charity-note, .booking-confirmation {
+  font-family: 'Lora', serif;
+}
+}
+
+
+
+
+
+
+
+
+
+/* Schedule and Booking Page Theme: Friedrich Palette */
+.schedule-root, .booking-root {
+  background: linear-gradient(180deg, #e0e6ec 0%, #b7c2cd 100%) !important;
+  color: #2d2221;
+}
+
+/* Schedule Table */
+.schedule-table {
+  background: #4d5660;
+  color: #fff7e1;
+}
+.schedule-table th {
+  background: #2a2e26;
+  color: #fff7e1;
+}
+.schedule-table tr:nth-child(even) td {
+  background: #7a8794;
+  color: #fff7e1;
+}
+.schedule-table tr:nth-child(odd) td {
+  background: #4d5660;
+  color: #fff7e1;
+}
+.schedule-table th, .schedule-table td {
+  border: 1px solid #b7c2cd;
+}
+
+/* Schedule links (back, etc.) */
+.schedule-link, .back-link {
+  color: #fff7e1;
+  background: linear-gradient(90deg, #4d5660 40%, #7a8794 100%);
+  transition: background 0.2s, color 0.2s;
+}
+.schedule-link:hover, .back-link:hover {
+  background: linear-gradient(90deg, #c9a86a 40%, #7a8794 100%);
+  color: #2a2e26;
+}
+
+/* Book Button in Schedule Table */
+.book-btn {
+  background: linear-gradient(90deg, #3e4a3a 40%, #4d5660 100%);
+  color: #fff7e1;
+  border: none;
+  border-radius: 0.4em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px 0 rgba(77,86,96,0.11);
+  margin: 0.1em 0.1em;
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  letter-spacing: 0.02em;
+}
+.book-btn:hover {
+  background: linear-gradient(90deg, #c9a86a 40%, #3e4a3a 100%);
+  color: #2a2e26;
+  box-shadow: 0 2px 8px 0 rgba(77,86,96,0.21);
+}
+
+/* Booking Form and Details */
+.booking-details {
+  background: rgba(183, 194, 205, 0.13);
+  box-shadow: 0 2px 20px 0 rgba(77,86,96,0.09);
+  color: #2d2221;
+}
+.booking-form label {
+  color: #3e4a3a;
+}
+.booking-form input[type="number"],
+.booking-form input[type="text"],
+.booking-form input[type="email"] {
+  background: #e0e6ec;
+  color: #2d2221;
+  border: 1px solid #b7c2cd;
+}
+.booking-form input[type="number"]:focus,
+.booking-form input[type="text"]:focus,
+.booking-form input[type="email"]:focus {
+  border: 1.5px solid #c9a86a;
+  background: #fff7e1;
+}
+
+.booking-btn {
+  background: linear-gradient(90deg, #3e4a3a 40%, #4d5660 100%);
+  color: #fff7e1;
+}
+.booking-btn:hover {
+  background: linear-gradient(90deg, #c9a86a 40%, #3e4a3a 100%);
+  color: #2a2e26;
+}
+
+.booking-btn:disabled, .book-btn:disabled {
+  background: #b7c2cd !important;
+  color: #7a8794 !important;
+  cursor: not-allowed !important;
+}
+
+.booking-charity-note, .booking-confirmation {
+  background: #b7c2cd;
+  color: #2d2221;
+  border-radius: 0.5em;
+}
+.booking-charity-note em {
+  color: #2d2221;
+}
+.booking-confirmation strong {
+  color: #c9a86a;
+}
+
+/* Headings */
+.club-title, .club-subtitle {
+  color: #fff;
+}
