@@ -2,7 +2,6 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Schedule from "./pages/Schedule";
-import Booking from "./pages/Booking";
 
 function App() {
   return (
