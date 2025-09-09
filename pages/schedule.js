@@ -6,14 +6,14 @@ import Link from "next/link";
 const months1 = ["November", "December"];
 const months2 = ["March", "April", "May"];
 const venues = [
-  "TBC",
-  "TBC",
-  "TBC",
-  "TBC",
-  "TBC",
-  "TBC",
-  "TBC",
-  "TBC",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katherine",
 ];
 const works = [
   "TBC",

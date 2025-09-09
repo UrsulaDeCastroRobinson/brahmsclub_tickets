@@ -87,7 +87,7 @@ export default function Booking() {
             <input
               type="number"
               value={amount}
-              placeholder="£5, £10 or £20. Contact us for season donation"
+              placeholder="£5, £10 or £20."
               min="1"
               onChange={e => setAmount(e.target.value)}
               required
@@ -151,6 +151,8 @@ export default function Booking() {
 		   <em>
 		   <br />
 		   Contact: contact@brahmsclub.org
+		   <br />
+		   Please contact us for season ticket.
           </em>
 		  </div>
         </div>
