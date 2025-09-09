@@ -51,10 +51,14 @@ export default function Schedule() {
     events.push(...sundays.map(date => ({ date, venue: venues[(idx + 3) % venues.length] })));
   });
 
-  // Exclude events where the date string starts with "28" (any language, any format)
-  const filteredEvents = events.filter(({ date }) => {
-    return !/^28(\D|$)/.test(date.trim());
-  });
+	// Exclude events where the date string starts with "28" (any language, any format)
+	let filteredEvents = events.filter(({ date }) => {
+	  // Exclude if date starts with 28, or contains 17, 24, or 31 as a whole word (to avoid language issues)
+	  return (
+		!/^28(\D|$)/.test(date.trim()) &&
+		!/\b(17|24|31)\b/.test(date)
+	  );
+	});
 
   return (
     <ResponsiveContainer>
