@@ -6,14 +6,14 @@ import Link from "next/link";
 const months1 = ["November", "December"];
 const months2 = ["March", "April", "May"];
 const venues = [
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
-  "The Royal Foundation of St Katherine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
+  "The Royal Foundation of St Katharine",
 ];
 
 function getSundays(month, year) {
@@ -79,15 +79,15 @@ export default function Schedule() {
                   <td>{venue}</td>
                   <td>
 				  {i === 0
-					? "Opus 8: Piano Trio No. 1 in B major"
+					? "Piano Trio No. 1 in B major"
 					: i === 1
-					  ? "Opus 26: Piano Quartet No. 2 in A major"
+					  ? "Piano Quartet No. 2 in A major"
 					  : i === 3
-					  ? "Opus 38: Cello Sonata No. 1 in E minor; Opus 36: String Sextet No. 2 in G major"
+					  ? "Cello Sonata No. 1 in E minor; String Sextet No. 2 in G major"
 					   : i === 4
-					  ? "Opus 34: Piano Quintet in F minor"
+					  ? "Piano Quintet in F minor"
 					  : i === 5
-					  ? "Opus 51: String Quartet No. 2 in A minor; Opus 18: String Sextet No. 1 in B-flat major"
+					  ? "String Quartet No. 2 in A minor; String Sextet No. 1 in B-flat major"
 					  : "TBC"}
 				  </td>
                   <td>
