@@ -15,9 +15,6 @@ const venues = [
   "The Royal Foundation of St Katherine",
   "The Royal Foundation of St Katherine",
 ];
-const works = [
-  "TBC",
-];
 
 function getSundays(month, year) {
   // Get all Sundays in a month
@@ -80,7 +77,19 @@ export default function Schedule() {
                 <tr key={i}>
                   <td>{date}</td>
                   <td>{venue}</td>
-                  <td>{works}</td>
+                  <td>
+				  {i === 0
+					? "Opus 8: Piano Trio No. 1 in B major"
+					: i === 1
+					  ? "Opus 26: Piano Quartet No. 2 in A major"
+					  : i === 3
+					  ? "Opus 38: Cello Sonata No. 1 in E minor; Opus 36: String Sextet No. 2 in G major"
+					   : i === 4
+					  ? "Opus 34: Piano Quintet in F minor"
+					  : i === 5
+					  ? "Opus 51: String Quartet No. 2 in A minor; Opus 18: String Sextet No. 1 in B-flat major"
+					  : "TBC"}
+				  </td>
                   <td>
                     <Link
                       href={{
