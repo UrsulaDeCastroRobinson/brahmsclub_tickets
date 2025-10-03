@@ -66,7 +66,7 @@ export default function Schedule() {
           <table className="schedule-table">
             <thead>
               <tr>
-                <th>Date (Sunday)</th>
+                <th>Date (at 2pm)</th>
                 <th>Venue</th>
                 <th>Works</th>
                 <th>Book Tickets</th>
