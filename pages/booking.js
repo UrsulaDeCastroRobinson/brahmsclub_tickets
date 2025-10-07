@@ -133,7 +133,12 @@ export default function Booking() {
         </form>
         <div className="booking-charity-note">
           <em>
-            All proceeds go towards our supported charities: Ilumina Music&nbsp;
+            Include a Sunday roast or afternoon tea
+			  <a href="https://www.opentable.com/r/afternoon-tea-at-the-royal-foundation-of-st-katharine-london" target="_blank" rel="noopener noreferrer">
+              (link)
+            </a>
+			 <br />
+			All proceeds go towards our supported charities: Ilumina Music&nbsp;
             <a href="https://iluminamusic.com/en/about-top" target="_blank" rel="noopener noreferrer">
               (link)
             </a>
