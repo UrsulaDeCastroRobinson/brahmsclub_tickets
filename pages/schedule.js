@@ -82,12 +82,16 @@ export default function Schedule() {
 					? "Piano Trio No. 1 in B major"
 					: i === 1
 					  ? "Piano Quartet No. 2 in A major"
+					  : i === 2
+					  ? "Clarinet Quintet"
 					  : i === 3
 					  ? "Cello Sonata No. 1 in E minor; String Sextet No. 2 in G major"
 					   : i === 4
 					  ? "Piano Quintet in F minor"
 					  : i === 5
 					  ? "String Quartet No. 2 in A minor; String Sextet No. 1 in B-flat major"
+					   : i === 6
+					  ? "String Quintet in F major"
 					  : "TBC"}
 				  </td>
                   <td>

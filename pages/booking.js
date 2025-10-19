@@ -134,7 +134,7 @@ export default function Booking() {
         <div className="booking-charity-note">
           <em>
             Include a Sunday roast or afternoon tea
-			  <a href="https://www.opentable.com/r/afternoon-tea-at-the-royal-foundation-of-st-katharine-london" target="_blank" rel="noopener noreferrer">
+			<a href="https://www.opentable.com/r/afternoon-tea-at-the-royal-foundation-of-st-katharine-london" target="_blank" rel="noopener noreferrer">
               (link)
             </a>
 			 <br />
