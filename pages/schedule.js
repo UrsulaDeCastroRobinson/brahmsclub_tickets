@@ -91,6 +91,8 @@ export default function Schedule() {
 					  : i === 5
 					  ? "String Quartet No. 2 in A minor; String Sextet No. 1 in B-flat major"
 					   : i === 6
+					  ? "Jennifer Stumm and friends"
+					  : i === 7
 					  ? "String Quintet in F major"
 					  : "TBC"}
 				  </td>
