@@ -97,10 +97,7 @@ export default function Schedule() {
 					  : "TBC"}
 				  </td>
                   <td>
-					//{i === 0 ? (
-					//	<span style={{ fontWeight: "bold", color: "red" }}>Fully booked</span>
-				//) : (                   
-				   <Link
+				    <Link
                       href={{
                         pathname: "/booking",
                         query: { date }
@@ -110,8 +107,7 @@ export default function Schedule() {
                     >
                       Book Tickets
                     </Link>
-					 // )}
-                  </td>
+				  </td>
                 </tr>
               ))}
             </tbody>
