@@ -90,10 +90,30 @@ export default function Schedule() {
 					  ? "Piano Quintet in F minor"
 					  : i === 5
 					  ? "String Quartet No. 2 in A minor; String Sextet No. 1 in B-flat major"
-					   : i === 6
+					  : i === 6
 					  ? "Jennifer Stumm and friends"
 					  : i === 7
 					  ? "String Quintet in F major"
+					  : i === 8
+					  ? "Clarinet Trio; Clarinet Sonata Eb minor"
+					  : i === 9
+					  ? "Waltzes - piano four hands"
+					  : i === 10
+					  ? "TBC"
+					  : i === 11
+					  ? "TBC"
+					  : i === 12
+					  ? "TBC"
+					  : i === 13
+					  ? "F major cello sonata"
+					  : i === 14
+					  ? "Piano quartet C minor; Bb minor string quartet"
+					  : i === 15
+					  ? "Piano trio C minor; Franck violin sonata"
+					  : i === 16
+					  ? "Piano trio C major; violin sonata A major"
+					  : i === 17
+					  ? "Piano quartet G major; violin sonata G major"
 					  : "TBC"}
 				  </td>
                   <td>
