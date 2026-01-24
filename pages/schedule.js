@@ -101,6 +101,18 @@ export default function Schedule() {
 						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
 				) : i === 1 ? (
 						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 2 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 3 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 4 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>	
+				) : i === 5 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 6 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 7 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>								
 				) : (     
               
 				   <Link
