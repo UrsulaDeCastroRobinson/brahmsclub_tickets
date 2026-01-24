@@ -98,8 +98,11 @@ export default function Schedule() {
 				  </td>
                   <td>
 					{i === 0 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Fully booked</span>
-				) : (                   
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : i === 1 ? (
+						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				) : (     
+              
 				   <Link
                       href={{
                         pathname: "/booking",
