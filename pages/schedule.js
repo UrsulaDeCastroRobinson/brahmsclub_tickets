@@ -53,7 +53,7 @@ export default function Schedule() {
 	  // Exclude if date starts with 28, or contains 17, 24, or 31 as a whole word (to avoid language issues)
 	  return (
 		!/^28(\D|$)/.test(date.trim()) &&
-		!/\b(17|24|31)\b/.test(date)
+		!/\b(1|8|24|31)\b/.test(date)
 	  );
 	});
 
