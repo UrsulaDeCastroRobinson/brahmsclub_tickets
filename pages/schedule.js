@@ -2,7 +2,7 @@ import React from "react";
 import ResponsiveContainer from "../components/ResponsiveContainer";
 import Link from "next/link";
 
-// Sundays in November-December and March-May
+// Sundays in March-May
 const months1 = ["November", "December"];
 const months2 = ["March", "April", "May"];
 const venues = [
@@ -40,11 +40,11 @@ export default function Schedule() {
   // Generate all events
   const events = [];
   months1.forEach((month, idx) => {
-    const sundays = getSundays(idx + 10, currentYear); // November=10
+    const sundays = getSundays(idx + 10, currentYear - 1); // November=10
     events.push(...sundays.map(date => ({ date, venue: venues[idx % venues.length] })));
   });
   months2.forEach((month, idx) => {
-    const sundays = getSundays(idx + 2, currentYear + 1); // March=2, next calendar year
+    const sundays = getSundays(idx + 2, currentYear); // March=2, next calendar year
     events.push(...sundays.map(date => ({ date, venue: venues[(idx + 3) % venues.length] })));
   });
 
