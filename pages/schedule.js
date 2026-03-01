@@ -3,7 +3,6 @@ import ResponsiveContainer from "../components/ResponsiveContainer";
 import Link from "next/link";
 
 // Sundays in March-May
-const months1 = ["November", "December"];
 const months2 = ["March", "April", "May"];
 const venues = [
   "The Royal Foundation of St Katharine",
@@ -39,10 +38,6 @@ export default function Schedule() {
   const currentYear = new Date().getFullYear();
   // Generate all events
   const events = [];
-  months1.forEach((month, idx) => {
-    const sundays = getSundays(idx + 10, currentYear - 1); // November=10
-    events.push(...sundays.map(date => ({ date, venue: venues[idx % venues.length] })));
-  });
   months2.forEach((month, idx) => {
     const sundays = getSundays(idx + 2, currentYear); // March=2, next calendar year
     events.push(...sundays.map(date => ({ date, venue: venues[(idx + 3) % venues.length] })));
@@ -79,61 +74,45 @@ export default function Schedule() {
                   <td>{venue}</td>
                   <td>
 				  {i === 0
-					? "Piano Trio No. 1 in B major"
-					: i === 1
-					  ? "Piano Quartet No. 2 in A major"
-					  : i === 2
-					  ? "Clarinet Quintet"
-					  : i === 3
-					  ? "Cello Sonata No. 1 in E minor; String Sextet No. 2 in G major"
-					   : i === 4
-					  ? "Piano Quintet in F minor"
-					  : i === 5
-					  ? "String Quartet No. 2 in A minor; String Sextet No. 1 in B-flat major"
-					  : i === 6
-					  ? "Jennifer Stumm and friends"
-					  : i === 7
-					  ? "String Quintet in F major"
-					  : i === 8
 					  ? "Clarinet Trio; Clarinet Sonata Eb minor"
-					  : i === 9
+					  : i === 1
 					  ? "Waltzes - piano four hands"
-					  : i === 10
+					  : i === 2
+					  ? "String Sextet Bb major"
+					  : i === 3
+					  ? "No concert, Easter Sunday"
+					  : i === 4
 					  ? "TBC"
-					  : i === 11
-					  ? "TBC"
-					  : i === 12
-					  ? "TBC"
-					  : i === 13
-					  ? "F major cello sonata"
-					  : i === 14
-					  ? "Piano quartet C minor; Bb minor string quartet"
-					  : i === 15
-					  ? "Piano trio C minor; Franck violin sonata"
-					  : i === 16
+					  : i === 5
+					  ? "Horn trio"
+					  : i === 6
+					  ? "Cello sonata F major"
+					  : i === 7
+					  ? "Piano quartet C minor; String quartet Bb major"
+					  : i === 8
 					  ? "Piano trio C major; violin sonata A major"
-					  : i === 17
-					  ? "Piano quartet G major; violin sonata G major"
+					  : i === 9
+					  ? "Piano quartet G minor; violin sonata G major"
 					  : "TBC"}
 				  </td>
                   <td>
-					{i === 0 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
-				) : i === 1 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
-				) : i === 2 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+					//{i === 0 ? (
+					//	<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				//) : i === 1 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				//) : i === 2 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
 				) : i === 3 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
-				) : i === 4 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>	
-				) : i === 5 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
-				) : i === 6 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
-				) : i === 7 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>								
-				) : (     
+						<span style={{ fontWeight: "bold", color: "red" }}>No concert</span>
+				//) : i === 4 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>	
+				//) : i === 5 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				//) : i === 6 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>
+				//) : i === 7 ? (
+						//<span style={{ fontWeight: "bold", color: "red" }}>Not available</span>								
+				//) : (     
               
 				   <Link
                       href={{
