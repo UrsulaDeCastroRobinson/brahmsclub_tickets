@@ -82,18 +82,18 @@ export default function Schedule() {
 					  : i === 3
 					  ? "No concert, Easter Sunday"
 					  : i === 4
-					  ? "TBC"
-					  : i === 5
 					  ? "Horn trio"
-					  : i === 6
+					  : i === 5
 					  ? "Cello sonata F major"
-					  : i === 7
+					  : i === 6
 					  ? "Piano quartet C minor; String quartet Bb major"
+					  : i === 7
+					  ? "Piano trio C minor"
 					  : i === 8
 					  ? "Piano trio C major; violin sonata A major"
 					  : i === 9
 					  ? "Piano quartet G minor; violin sonata G major"
-					  : "TBC"}
+					  }
 				  </td>
                   <td>
 					{ i === 3 ? (
