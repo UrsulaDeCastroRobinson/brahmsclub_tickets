@@ -93,7 +93,7 @@ export default function Schedule() {
 					  ? "Piano trio C major; violin sonata A major"
 					  : i === 9
 					  ? "Piano quartet G minor; violin sonata G major"
-					  }
+					  : "TBC"}
 				  </td>
                   <td>
 					{ i === 3 ? (
