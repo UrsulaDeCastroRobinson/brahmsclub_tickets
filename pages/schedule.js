@@ -74,7 +74,7 @@ export default function Schedule() {
                   <td>{venue}</td>
                   <td>
 				  {i === 0
-					  ? "Clarinet Trio; Clarinet Sonata Eb minor"
+					  ? "Clarinet Trio; Clarinet Sonata Eb major"
 					  : i === 1
 					  ? "Waltzes - piano four hands"
 					  : i === 2

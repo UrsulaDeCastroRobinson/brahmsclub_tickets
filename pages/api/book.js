@@ -56,6 +56,7 @@ Ticket details:
 
 Concert series: ${ticketInfo.concert_name}
 Date: ${date}
+Time: 2pm
 Name: ${name}
 Number of tickets: ${quantity}
 Email: ${email}
