@@ -6,7 +6,7 @@ import Link from "next/link";
 const months2 = ["March", "April", "May"];
 const venues = [
   "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
+  "test",
   "The Royal Foundation of St Katharine",
   "The Royal Foundation of St Katharine",
   "The Royal Foundation of St Katharine",
