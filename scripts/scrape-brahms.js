@@ -109,6 +109,8 @@ function extractSection($, headingText) {
       sibling = sibling.next();
     }
 
+    // Preserve section item boundaries so downstream programme parsing can keep
+    // composer headings and work titles as separate chunks.
     const text = parts.filter(Boolean).join(" | ").replace(/\s+/g, " ").trim();
     if (text) {
       result = text;
@@ -173,8 +175,9 @@ const COMPOSER_HEADING_REGEX = new RegExp(
 );
 const NON_WORK_LINE_REGEX = /\b(?:recital|concert|programme|program|overview|artist|featuring|performed by|with|alongside|hosted by)\b/i;
 const WORK_TITLE_HINT_REGEX = /\b(?:op\.?|opus|no\.?|sonata|trio|quartet|quintet|sextet|septet|octet|concerto|symphony|rhapsody|intermezzi|variations|waltz|ballade|fantasy|lied|songs?)\b/i;
-const PERFORMER_LINE_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){1,4}\s+(?:violin|viola|cello|piano|soprano|mezzo-soprano|tenor|baritone|bass|conductor)\b/ui;
+const PERFORMER_LINE_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){0,4}\s+(?:violin|viola|cello|piano|soprano|mezzo-soprano|tenor|baritone|bass|conductor)\b/ui;
 const MAX_WORK_TITLE_LENGTH = 140;
+const SENTENCE_PUNCTUATION_REGEX = /[!?]|[.](?:\s+[A-Z]|$)/;
 
 function dedupeCaseInsensitive(values) {
   const seen = new Set();
@@ -222,7 +225,7 @@ function isLikelyWorkTitle(value) {
   if (!value) return false;
   if (NON_WORK_LINE_REGEX.test(value) || PERFORMER_LINE_REGEX.test(value)) return false;
   if (WORK_TITLE_HINT_REGEX.test(value)) return true;
-  if (/[.!?]/.test(value) || value.length > MAX_WORK_TITLE_LENGTH) return false;
+  if (SENTENCE_PUNCTUATION_REGEX.test(value) || value.length > MAX_WORK_TITLE_LENGTH) return false;
   const words = value.split(/\s+/).length;
   return words >= 2 && words <= 12;
 }
