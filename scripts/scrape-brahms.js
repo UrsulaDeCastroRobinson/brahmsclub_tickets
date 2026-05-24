@@ -109,7 +109,7 @@ function extractSection($, headingText) {
       sibling = sibling.next();
     }
 
-    const text = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    const text = parts.filter(Boolean).join(" | ").replace(/\s+/g, " ").trim();
     if (text) {
       result = text;
       return false; // stop iterating once the first matching section is found
@@ -164,6 +164,9 @@ const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
   /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i;
 const COMPOSER_NAME_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*)?";
 const PROGRAMME_SPLIT_REGEX = /\s*(?:[|•·;])\s*/;
+const BRAHMS_PREFIX_REGEX = /^(?:johannes\s+)?brahms\b(?:\s*\(?\d{4}\s*[-–—]\s*\d{4}\)?)?/iu;
+const COMPOSER_HEADING_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){0,3}(?:\s+\d{4}\s*[-–—]\s*\d{4})?$/u;
+const NON_WORK_LINE_REGEX = /\b(?:recital|concert|programme|program|overview|artist|featuring|performed by|with|alongside|hosted by)\b/i;
 
 function dedupeCaseInsensitive(values) {
   const seen = new Set();
@@ -179,6 +182,7 @@ function dedupeCaseInsensitive(values) {
 
 function cleanBrahmsWork(value) {
   return normaliseWhitespace(value)
+    .replace(BRAHMS_PREFIX_REGEX, "")
     .replace(/^[-:–—\s]+/, "")
     .replace(BRAHMS_DESCRIPTIVE_SUFFIX_REGEX, "")
     .replace(/[.,;:!?]+$/, "")
@@ -219,7 +223,7 @@ function extractBrahmsEntriesFromText(text) {
 
   while ((match = composerTaggedRegex.exec(value)) !== null) {
     const work = cleanBrahmsWork(match[1]);
-    if (work) entries.push(`Brahms: ${work}`);
+    if (work) entries.push(work);
   }
 
   if (entries.length > 0) {
@@ -227,10 +231,27 @@ function extractBrahmsEntriesFromText(text) {
   }
 
   const chunks = value.split(PROGRAMME_SPLIT_REGEX).filter(Boolean);
+  let inBrahmsBlock = false;
   for (const chunk of chunks) {
-    if (!containsBrahms(chunk)) continue;
-    const cleaned = cleanBrahmsEntry(chunk);
-    if (cleaned) entries.push(cleaned);
+    const cleanedChunk = normaliseWhitespace(chunk);
+    if (!cleanedChunk) continue;
+
+    if (containsBrahms(cleanedChunk)) {
+      const work = cleanBrahmsWork(cleanedChunk);
+      if (work) entries.push(work);
+      inBrahmsBlock = true;
+      continue;
+    }
+
+    if (!inBrahmsBlock) continue;
+
+    if (COMPOSER_HEADING_REGEX.test(cleanedChunk)) {
+      inBrahmsBlock = false;
+      continue;
+    }
+
+    if (NON_WORK_LINE_REGEX.test(cleanedChunk)) continue;
+    entries.push(cleanedChunk.replace(/[.,;:!?]+$/, "").trim());
   }
 
   return dedupeCaseInsensitive(entries);
