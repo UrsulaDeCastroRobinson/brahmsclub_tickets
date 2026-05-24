@@ -383,8 +383,10 @@ function hasDiscoveryProgress(previousSnapshot, currentSnapshot) {
     || currentSnapshot.scrollHeight > previousSnapshot.scrollHeight;
 }
 
+const SCROLL_END_THRESHOLD_PX = 16;
+
 function isAtScrollEnd({ scrollY, viewportHeight, scrollHeight }) {
-  return scrollY + viewportHeight >= scrollHeight - 16;
+  return scrollY + viewportHeight >= scrollHeight - SCROLL_END_THRESHOLD_PX;
 }
 
 function nextStableEndRounds(stableEndRounds, { progressed, atScrollEnd }) {
@@ -430,17 +432,19 @@ async function collectWigmoreEventLinksWithBrowser() {
     const MAX_SCROLL_ROUNDS = 80;
     const MIN_SCROLL_ROUNDS = 8;
     const MAX_STABLE_END_ROUNDS = 8;
+    const FULL_SCROLL_INTERVAL = 5;
+    const SCROLL_SETTLE_WAIT_MS = 750;
     let stableEndRounds = 0;
 
     for (let i = 0; i < MAX_SCROLL_ROUNDS; i++) {
-      await page.evaluate((round) => {
+      await page.evaluate(({ round, fullScrollInterval }) => {
         const step = Math.max(window.innerHeight * 0.9, 700);
-        const nextY = round % 5 === 4
+        const nextY = round % fullScrollInterval === fullScrollInterval - 1
           ? document.body.scrollHeight
           : Math.min(window.scrollY + step, document.body.scrollHeight);
         window.scrollTo(0, nextY);
-      }, i);
-      await page.waitForTimeout(750);
+      }, { round: i, fullScrollInterval: FULL_SCROLL_INTERVAL });
+      await page.waitForTimeout(SCROLL_SETTLE_WAIT_MS);
       await page.waitForLoadState("networkidle", { timeout: 2500 }).catch(() => {});
 
       const links = await extractRenderedEventLinks(page);
