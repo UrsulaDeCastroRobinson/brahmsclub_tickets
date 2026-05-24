@@ -181,11 +181,13 @@ const PERFORMER_ROLE_TERMS = [
   "trumpet", "trombone", "harp", "guitar", "organ", "soprano", "mezzo-soprano",
   "tenor", "baritone", "bass", "conductor",
 ];
-const PERFORMER_ROLE_PATTERN = PERFORMER_ROLE_TERMS.map((role) => role.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")).join("|");
+const PERFORMER_ROLE_PATTERN = PERFORMER_ROLE_TERMS.join("|");
 const PERFORMER_LINE_REGEX = new RegExp(
   `^${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN}){0,4}\\s+(?:${PERFORMER_ROLE_PATTERN})\\b`,
   "iu"
 );
+// Typical single work titles fit comfortably below this; longer strings are
+// usually sentence-like programme prose we want to exclude.
 const MAX_WORK_TITLE_LENGTH = 140;
 const SENTENCE_PUNCTUATION_REGEX = /[!?]|[.](?:\s+[A-Z]|$)/;
 
