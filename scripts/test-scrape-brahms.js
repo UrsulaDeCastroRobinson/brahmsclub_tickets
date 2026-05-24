@@ -127,8 +127,8 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606241300");
   assert(
-    "uses the Programme section text as output when available",
-    event && event.programme === "Schubert: Sonata in A major, D. 664 Brahms: Violin Sonata No. 1 in G major, Op. 78 Schumann: Violin Sonata No. 2 in D minor, Op. 121"
+    "mixed-composer programme resolves to canonical Brahms work",
+    event && event.programme === "Violin Sonata No. 1 in G major, Op. 78"
   );
 }
 
@@ -138,8 +138,21 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "falls back to meta description text when Programme is unavailable",
-    event && event.programme === "A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114."
+    "overview/meta fallback supports opus-based matching",
+    event && event.programme === "Clarinet Trio in A minor, Op. 114"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Late-night chamber recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms: sonata for violin and piano no 3 in d minor op 108</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
+  assert(
+    "opus-based matching resolves canonical title",
+    event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
   );
 }
 
@@ -154,8 +167,37 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606171300");
   assert(
-    "prefers Programme section text over Overview fallback",
-    event && event.programme === "Johannes Brahms 1833–1897 Piano Sonata No. 3 in F minor Op. 5"
+    "exact alias matching returns canonical piano sonata title",
+    event && event.programme === "Piano Sonata No. 3 in F minor, Op. 5"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Autumn chamber concert</h1>
+    <h3>Programme</h3>
+    <p>Brahms: Clarinet Trio in A minor Op. 114</p>
+    <p>Brahms: Clarinet Quintet in B minor, Op. 115</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202610061930");
+  assert(
+    "multiple Brahms works are joined with separators",
+    event && event.programme === "Clarinet Trio in A minor, Op. 114 / Clarinet Quintet in B minor, Op. 115"
+  );
+}
+
+{
+  const html = `<html><head>
+    <meta property="og:description" content="Join us for Brahms with rising stars in an evening of chamber music.">
+  </head><body>
+    <h1>Brahms chamber evening</h1>
+    <h3>Overview</h3>
+    <p>An introduction to Johannes Brahms and his legacy.</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202609011930");
+  assert(
+    "no-match behaviour falls back to broad text sources",
+    event && event.programme === "An introduction to Johannes Brahms and his legacy."
   );
 }
 
