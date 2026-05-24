@@ -77,10 +77,12 @@ function extractTitle(html) {
 
 /**
  * Extract a <meta> tag's content by attribute name and value.
+ * Uses .filter() with direct attribute comparison to avoid CSS selector injection.
  * E.g. extractMetaContent($, "name", "description") or extractMetaContent($, "property", "og:description").
  */
 function extractMetaContent($, attribute, value) {
-  return ($(`meta[${attribute}="${value}"]`).attr("content") || "").trim();
+  const el = $("meta").filter((_, meta) => $(meta).attr(attribute) === value).first();
+  return (el.attr("content") || "").trim();
 }
 
 /**
@@ -101,8 +103,8 @@ function extractSection($, headingText) {
     const parts = [];
 
     while (sibling.length) {
-      const sibTag = sibling.prop("tagName");
-      if (sibTag && /^h[1-5]$/i.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
+      const sibTag = (sibling.prop("tagName") || "").toLowerCase();
+      if (/^h[1-5]$/.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
       parts.push(sibling.text().trim());
       sibling = sibling.next();
     }
@@ -278,7 +280,7 @@ async function scrapeWigmoreHall() {
 
 async function scrapeSource(source) {
   if (source.id === "wigmore-hall") {
-    return scrapeWigmoreHall(source);
+    return scrapeWigmoreHall();
   }
 
   return [];
