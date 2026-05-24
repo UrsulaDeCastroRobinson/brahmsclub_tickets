@@ -176,6 +176,91 @@ console.log("\nextractWigmoreEvent");
   );
 }
 
+// ---------------------------------------------------------------------------
+// Regression: event must not be dropped when Brahms evidence comes only from
+// structured extraction paths and not from literal flattened page text.
+// Guards against the failure mode where programme/title matching improves but
+// overall event coverage drops because the Brahms inclusion gate ignores the
+// newer extraction results.
+// ---------------------------------------------------------------------------
+
+{
+  // Repertoire DOM is inside a <footer>, so extractBodyText() strips that
+  // element and "Johannes Brahms" disappears from bodyText.
+  // extractBrahmsWorksFromWigmoreRepertoire() runs before that DOM mutation
+  // and does resolve the work — the event must be retained.
+  const html = `<html><body>
+    <h1>String Quintet Evening</h1>
+    <footer>
+      <article class="repertoire-items repertoire-work-item">
+        <li class="my3 flex flex-wrap">
+          <div class="w-4/12">
+            <a href="/artists/johannes-brahms">Johannes Brahms</a>
+            <p>1833-1897</p>
+          </div>
+          <div class="w-full sm:w-8/12">
+            <div class="repertoire-list">
+              <div class="rich-text inline bold">String Quintet in F Op. 88</div>
+            </div>
+          </div>
+        </li>
+      </article>
+    </footer>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606151930");
+  assert(
+    "event retained when Brahms is only in repertoire DOM stripped from bodyText (footer)",
+    event !== null
+  );
+  assert(
+    "programme resolved via repertoire DOM even when bodyText lacks Brahms",
+    event && event.programme === "String Quintet No. 1 in F major, Op. 88"
+  );
+}
+
+{
+  // Repertoire DOM inside a <nav> — another element removed by extractBodyText().
+  // The event must still be retained and programme resolved correctly.
+  const html = `<html><body>
+    <h1>Chamber Evening</h1>
+    <nav>
+      <article class="repertoire-items repertoire-work-item">
+        <li>
+          <div class="w-4/12">
+            <a href="/artists/brahms">Brahms</a>
+          </div>
+          <div class="repertoire-list">
+            <div class="rich-text inline bold">Clarinet Quintet in B minor, Op. 115</div>
+          </div>
+        </li>
+      </article>
+    </nav>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606221930");
+  assert(
+    "event retained when Brahms is only in repertoire DOM inside <nav>",
+    event !== null
+  );
+  assert(
+    "programme resolved via nav-wrapped repertoire DOM",
+    event && event.programme === "Clarinet Quintet in B minor, Op. 115"
+  );
+}
+
+{
+  // Negative control: no Brahms evidence in any path → still return null.
+  const html = `<html><body>
+    <h1>Mozart Evening</h1>
+    <h3>Programme</h3>
+    <p>Wolfgang Amadeus Mozart: String Quintet in G minor K516</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606051930");
+  assert(
+    "non-Brahms event is still correctly dropped",
+    event === null
+  );
+}
+
 {
   const html = `<html><head>
     <meta name="description" content="A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114.">
