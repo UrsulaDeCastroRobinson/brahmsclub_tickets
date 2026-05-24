@@ -429,16 +429,17 @@ async function collectWigmoreEventLinksWithBrowser() {
 
     // Scroll repeatedly to trigger lazy loading. Stop only after the listing is
     // still at the page end with no new links AND no extra height for several rounds.
-    // Empirically, Wigmore's lazy-loading can continue well past 30 passes;
-    // 80 rounds with early-stop heuristics reliably reaches late-month entries.
+    // Empirically, Wigmore's lazy-loading can continue well past the previous
+    // 30-scroll limit; 80 rounds with early-stop heuristics reaches late entries.
     const MAX_SCROLL_ROUNDS = 80;
     // Allow several scroll attempts before considering stability so late-loaded
     // cards still get a chance to appear.
     const MIN_SCROLL_ROUNDS = 8;
-    // Intentionally also 8: require a sustained stable-at-end period before stop.
+    // Require a sustained stable-at-end period before stop.
     const MAX_STABLE_END_ROUNDS = 8;
     const FULL_SCROLL_INTERVAL = 5;
-    // 750ms was chosen empirically to let Wigmore listing scripts append cards.
+    // 750ms was chosen empirically; shorter waits intermittently missed newly
+    // appended listing cards before the next extraction pass.
     const SCROLL_SETTLE_WAIT_MS = 750;
     let stableEndRounds = 0;
 
