@@ -13,6 +13,9 @@ const {
   containsBrahms,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
+  hasDiscoveryProgress,
+  isAtScrollEnd,
+  nextStableEndRounds,
 } = require("./scrape-brahms");
 
 // ---------------------------------------------------------------------------
@@ -183,8 +186,54 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "falls back to concise Brahms-only meta description extraction",
-    event && event.programme === "Clarinet Trio in A minor, Op. 114"
+    "does not use meta description prose as programme fallback",
+    event && event.programme === "Brahms work"
+  );
+}
+
+console.log("\ndiscovery helper logic");
+
+{
+  assert(
+    "hasDiscoveryProgress: detects new links",
+    hasDiscoveryProgress(
+      { linkCount: 59, scrollHeight: 8000 },
+      { linkCount: 60, scrollHeight: 8000 }
+    )
+  );
+  assert(
+    "hasDiscoveryProgress: detects increased scroll height",
+    hasDiscoveryProgress(
+      { linkCount: 59, scrollHeight: 8000 },
+      { linkCount: 59, scrollHeight: 8600 }
+    )
+  );
+  assert(
+    "hasDiscoveryProgress: false when both metrics are unchanged",
+    !hasDiscoveryProgress(
+      { linkCount: 59, scrollHeight: 8000 },
+      { linkCount: 59, scrollHeight: 8000 }
+    )
+  );
+  assert(
+    "isAtScrollEnd: true when viewport reaches page end",
+    isAtScrollEnd({ scrollY: 7200, viewportHeight: 800, scrollHeight: 8000 })
+  );
+  assert(
+    "isAtScrollEnd: false when not yet near page end",
+    !isAtScrollEnd({ scrollY: 6400, viewportHeight: 800, scrollHeight: 8000 })
+  );
+  assert(
+    "nextStableEndRounds: increments only when unchanged at page end",
+    nextStableEndRounds(2, { progressed: false, atScrollEnd: true }) === 3
+  );
+  assert(
+    "nextStableEndRounds: resets when progress occurs",
+    nextStableEndRounds(2, { progressed: true, atScrollEnd: true }) === 0
+  );
+  assert(
+    "nextStableEndRounds: resets when not at page end",
+    nextStableEndRounds(2, { progressed: false, atScrollEnd: false }) === 0
   );
 }
 

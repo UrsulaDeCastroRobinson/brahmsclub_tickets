@@ -290,16 +290,13 @@ function extractBrahmsEntriesFromText(text) {
   return dedupeCaseInsensitive(entries);
 }
 
-function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, bodyText }) {
-  const sources = [programme, overview, metaDescription, ogDescription, bodyText];
-  for (const source of sources) {
-    const entries = extractBrahmsEntriesFromText(source);
-    if (entries.length > 0) {
-      return entries.join(" / ");
-    }
+function resolveWigmoreProgramme({ programme }) {
+  const programmeEntries = extractBrahmsEntriesFromText(programme);
+  if (programmeEntries.length > 0) {
+    return programmeEntries.join(" / ");
   }
 
-  return "Brahms programme";
+  return "Brahms work";
 }
 
 // ---------------------------------------------------------------------------
@@ -339,10 +336,6 @@ function extractWigmoreEvent(html, url) {
   const resolvedTitle = title || "Wigmore Hall event";
   const resolvedProgramme = resolveWigmoreProgramme({
     programme,
-    overview,
-    metaDescription,
-    ogDescription,
-    bodyText: bodyText || artists,
   });
 
   return {
@@ -385,6 +378,20 @@ async function extractRenderedEventLinks(page) {
   );
 }
 
+function hasDiscoveryProgress(previousSnapshot, currentSnapshot) {
+  return currentSnapshot.linkCount > previousSnapshot.linkCount
+    || currentSnapshot.scrollHeight > previousSnapshot.scrollHeight;
+}
+
+function isAtScrollEnd({ scrollY, viewportHeight, scrollHeight }) {
+  return scrollY + viewportHeight >= scrollHeight - 16;
+}
+
+function nextStableEndRounds(stableEndRounds, { progressed, atScrollEnd }) {
+  if (progressed || !atScrollEnd) return 0;
+  return stableEndRounds + 1;
+}
+
 /**
  * Discover Wigmore Hall event links by rendering the listing page with a
  * headless browser and scrolling to trigger lazy-loaded / infinite-scroll content.
@@ -411,30 +418,62 @@ async function collectWigmoreEventLinksWithBrowser() {
       timeout: 30000,
     });
 
-    // Scroll repeatedly to trigger lazy loading; stop once the link count stabilises
-    // across three consecutive scroll attempts (no new links loaded).
-    // 30 scrolls provides enough headroom to load a full month of events from a
-    // typical Wigmore Hall listing page without waiting indefinitely.
-    const MAX_SCROLLS = 30;
-    let previousCount = 0;
-    let stableRounds = 0;
+    const initialLinks = await extractRenderedEventLinks(page);
+    initialLinks.forEach((l) => eventLinkSet.add(l));
+    let previousSnapshot = {
+      linkCount: eventLinkSet.size,
+      scrollHeight: await page.evaluate(() => document.body.scrollHeight),
+    };
 
-    for (let i = 0; i < MAX_SCROLLS; i++) {
+    // Scroll repeatedly to trigger lazy loading. Stop only after the listing is
+    // still at the page end with no new links AND no extra height for several rounds.
+    const MAX_SCROLL_ROUNDS = 80;
+    const MIN_SCROLL_ROUNDS = 8;
+    const MAX_STABLE_END_ROUNDS = 8;
+    let stableEndRounds = 0;
+
+    for (let i = 0; i < MAX_SCROLL_ROUNDS; i++) {
+      await page.evaluate((round) => {
+        const step = Math.max(window.innerHeight * 0.9, 700);
+        const nextY = round % 5 === 4
+          ? document.body.scrollHeight
+          : Math.min(window.scrollY + step, document.body.scrollHeight);
+        window.scrollTo(0, nextY);
+      }, i);
+      await page.waitForTimeout(750);
+      await page.waitForLoadState("networkidle", { timeout: 2500 }).catch(() => {});
+
       const links = await extractRenderedEventLinks(page);
       links.forEach((l) => eventLinkSet.add(l));
 
-      if (eventLinkSet.size === previousCount) {
-        stableRounds++;
-        if (stableRounds >= 3) break;
-      } else {
-        stableRounds = 0;
-        previousCount = eventLinkSet.size;
+      const viewportMetrics = await page.evaluate(() => ({
+        scrollY: window.scrollY,
+        viewportHeight: window.innerHeight,
+        scrollHeight: document.body.scrollHeight,
+      }));
+
+      const currentSnapshot = {
+        linkCount: eventLinkSet.size,
+        scrollHeight: viewportMetrics.scrollHeight,
+      };
+      const atScrollEnd = isAtScrollEnd(viewportMetrics);
+      const progressed = hasDiscoveryProgress(previousSnapshot, currentSnapshot);
+      stableEndRounds = nextStableEndRounds(stableEndRounds, {
+        progressed,
+        atScrollEnd,
+      });
+
+      console.log(
+        `[Wigmore discovery] round ${i + 1}/${MAX_SCROLL_ROUNDS}: links=${currentSnapshot.linkCount} `
+        + `height=${currentSnapshot.scrollHeight} atEnd=${atScrollEnd} progressed=${progressed} `
+        + `stableEnd=${stableEndRounds}/${MAX_STABLE_END_ROUNDS}`
+      );
+
+      if (i + 1 >= MIN_SCROLL_ROUNDS && stableEndRounds >= MAX_STABLE_END_ROUNDS) {
+        break;
       }
 
-      // Scroll to bottom and wait for new content to render
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      // Wait for network activity from lazy loading to settle before extracting new links
-      await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+      previousSnapshot = currentSnapshot;
     }
 
     // Final pass after all scrolling is complete
@@ -564,6 +603,9 @@ module.exports = {
   getNextMonthDateRange,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
+  hasDiscoveryProgress,
+  isAtScrollEnd,
+  nextStableEndRounds,
 };
 
 if (require.main === module) {
