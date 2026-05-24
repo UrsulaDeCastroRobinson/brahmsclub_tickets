@@ -165,8 +165,14 @@ const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
 const COMPOSER_NAME_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*)?";
 const PROGRAMME_SPLIT_REGEX = /\s*(?:[|•·;])\s*/;
 const BRAHMS_PREFIX_REGEX = /^(?:johannes\s+)?brahms\b(?:\s*\(?\d{4}\s*[-–—]\s*\d{4}\)?)?/iu;
-const COMPOSER_HEADING_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){0,3}(?:\s+\d{4}\s*[-–—]\s*\d{4})?$/u;
+const MAX_COMPOSER_NAME_PARTS = 3;
+const COMPOSER_HEADING_REGEX = new RegExp(
+  `^[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*){0,${MAX_COMPOSER_NAME_PARTS}}(?:\\s+\\d{4}\\s*[-–—]\\s*\\d{4})?$`,
+  "u"
+);
 const NON_WORK_LINE_REGEX = /\b(?:recital|concert|programme|program|overview|artist|featuring|performed by|with|alongside|hosted by)\b/i;
+const WORK_TITLE_HINT_REGEX = /\b(?:op\.?|opus|no\.?|sonata|trio|quartet|quintet|sextet|septet|octet|concerto|symphony|rhapsody|intermezzi|variations|waltz|ballade|fantasy|lied|songs?)\b/i;
+const PERFORMER_LINE_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){1,4}\s+(?:violin|viola|cello|piano|soprano|mezzo-soprano|tenor|baritone|bass|conductor)\b/ui;
 
 function dedupeCaseInsensitive(values) {
   const seen = new Set();
@@ -210,6 +216,15 @@ function cleanBrahmsEntry(value) {
   return entry.replace(/^brahms\b/i, "Brahms");
 }
 
+function isLikelyWorkTitle(value) {
+  if (!value) return false;
+  if (NON_WORK_LINE_REGEX.test(value) || PERFORMER_LINE_REGEX.test(value)) return false;
+  if (WORK_TITLE_HINT_REGEX.test(value)) return true;
+  if (/[.!?]/.test(value) || value.length > 140) return false;
+  const words = value.split(/\s+/).length;
+  return words >= 2 && words <= 12;
+}
+
 function extractBrahmsEntriesFromText(text) {
   const value = normaliseWhitespace(text || "");
   if (!value || !containsBrahms(value)) return [];
@@ -250,8 +265,9 @@ function extractBrahmsEntriesFromText(text) {
       continue;
     }
 
-    if (NON_WORK_LINE_REGEX.test(cleanedChunk)) continue;
-    entries.push(cleanedChunk.replace(/[.,;:!?]+$/, "").trim());
+    const work = cleanBrahmsWork(cleanedChunk);
+    if (!isLikelyWorkTitle(work)) continue;
+    entries.push(work);
   }
 
   return dedupeCaseInsensitive(entries);
