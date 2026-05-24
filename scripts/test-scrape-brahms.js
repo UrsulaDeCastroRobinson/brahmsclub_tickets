@@ -177,8 +177,8 @@ console.log("\nextractWigmoreEvent");
 }
 
 // ---------------------------------------------------------------------------
-// Regression: event must NOT be dropped when Brahms evidence comes only from
-// structured extraction paths and NOT from literal flattened page text.
+// Regression: event must not be dropped when Brahms evidence comes only from
+// structured extraction paths and not from literal flattened page text.
 // Guards against the failure mode where programme/title matching improves but
 // overall event coverage drops because the Brahms inclusion gate ignores the
 // newer extraction results.
@@ -188,7 +188,7 @@ console.log("\nextractWigmoreEvent");
   // Repertoire DOM is inside a <footer>, so extractBodyText() strips that
   // element and "Johannes Brahms" disappears from bodyText.
   // extractBrahmsWorksFromWigmoreRepertoire() runs before that DOM mutation
-  // and DOES resolve the work — the event must be retained.
+  // and does resolve the work — the event must be retained.
   const html = `<html><body>
     <h1>String Quintet Evening</h1>
     <footer>

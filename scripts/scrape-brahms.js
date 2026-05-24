@@ -506,12 +506,13 @@ function extractWigmoreEvent(html, url) {
   // 2. the Wigmore repertoire DOM extractor already resolved Brahms works
   //    (runs before extractBodyText mutates $, so it can see content that
   //    extractBodyText later strips — e.g. inside <footer>/<nav>/<noscript>), OR
-  // 3. the structured Programme section contains a row/item attributed to Brahms.
+  // 3. the structured Programme section yielded at least one Brahms work
+  //    (uses the same composer-specific extraction as resolveWigmoreProgramme,
+  //    avoiding false positives from incidental "Brahms" mentions in notes).
   const hasBrahmsInText = containsBrahms(combinedText);
   const hasBrahmsInRepertoire = wigmoreRepertoireWorks.length > 0;
-  const hasBrahmsInStructuredProgramme = structuredProgrammeItems.some(
-    (item) => item.some((part) => containsBrahms(part))
-  );
+  const hasBrahmsInStructuredProgramme =
+    extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems).length > 0;
 
   if (!hasBrahmsInText && !hasBrahmsInRepertoire && !hasBrahmsInStructuredProgramme) {
     return null;
