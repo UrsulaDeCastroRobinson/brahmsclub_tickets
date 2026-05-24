@@ -5,6 +5,7 @@ const cheerio = require("cheerio");
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
 const brahmsWorksPath = path.join(__dirname, "data", "brahms-works.json");
+const wigmoreComposerFallbackSelector = ".w-4\\/12, .sm\\:w-4\\/12";
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -235,8 +236,8 @@ function textContainsTerm(normalisedText, term) {
     if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
   }
 
-  if (isFlexibleMultiWordTerm(term)) {
-    const tokenSet = new Set(splitTerms(normalisedText));
+  const tokenSet = isFlexibleMultiWordTerm(term) ? new Set(splitTerms(normalisedText)) : null;
+  if (tokenSet) {
     const termTokens = splitTerms(term);
     return termTokens.every((token) => tokenSet.has(token));
   }
@@ -252,6 +253,7 @@ function hasNumberingOrDigits(term) {
   return /\bno\b/.test(term) || /\d/.test(term);
 }
 
+// Numbered tokens (e.g. "no 3", "op 88") must stay exact; descriptive phrases can be order-flexible.
 function isFlexibleMultiWordTerm(term) {
   return term.includes(" ") && !hasNumberingOrDigits(term);
 }
@@ -402,7 +404,7 @@ function extractBrahmsWorksFromWigmoreRepertoire($) {
     // Wigmore currently uses Tailwind utility classes in this left-column block.
     // Keep the generic artist-link selector first, then class-based fallback.
     const composerText = normaliseWhitespace(
-      $(item).find("a[href^='/artists/']").first().text() || $(item).find(".w-4\\/12, .sm\\:w-4\\/12").first().text()
+      $(item).find("a[href^='/artists/']").first().text() || $(item).find(wigmoreComposerFallbackSelector).first().text()
     );
     if (!containsBrahms(composerText)) return;
 
