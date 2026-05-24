@@ -160,6 +160,14 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
+  /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i;
+const COMPOSER_NAME_PATTERN = "[A-Z][A-Za-z'’.-]*(?:\\s+[A-Z][A-Za-z'’.-]*)?";
+const BRAHMS_COMPOSER_TAGGED_REGEX = new RegExp(
+  `\\bbrahms\\b\\s*:\\s*([\\s\\S]*?)(?=(?:\\b${COMPOSER_NAME_PATTERN}\\s*:)|[|•;]|$)`,
+  "gi"
+);
+
 function dedupeCaseInsensitive(values) {
   const seen = new Set();
   const result = [];
@@ -175,10 +183,7 @@ function dedupeCaseInsensitive(values) {
 function cleanBrahmsWork(value) {
   return normaliseWhitespace(value)
     .replace(/^[-:–—\s]+/, "")
-    .replace(
-      /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i,
-      ""
-    )
+    .replace(BRAHMS_DESCRIPTIVE_SUFFIX_REGEX, "")
     .replace(/[.,;:!?]+$/, "")
     .trim();
 }
@@ -190,10 +195,7 @@ function cleanBrahmsEntry(value) {
   if (idx > 0) entry = entry.slice(idx);
 
   entry = entry
-    .replace(
-      /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i,
-      ""
-    )
+    .replace(BRAHMS_DESCRIPTIVE_SUFFIX_REGEX, "")
     .replace(/[.,;:!?]+$/, "")
     .trim();
 
@@ -212,11 +214,10 @@ function extractBrahmsEntriesFromText(text) {
   if (!value || !containsBrahms(value)) return [];
 
   const entries = [];
-  const composerTaggedRegex =
-    /\bbrahms\b\s*:\s*([\s\S]*?)(?=(?:\b[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*)?\s*:)|[|•;]|$)/gi;
+  BRAHMS_COMPOSER_TAGGED_REGEX.lastIndex = 0;
   let match;
 
-  while ((match = composerTaggedRegex.exec(value)) !== null) {
+  while ((match = BRAHMS_COMPOSER_TAGGED_REGEX.exec(value)) !== null) {
     const work = cleanBrahmsWork(match[1]);
     if (work) entries.push(`Brahms: ${work}`);
   }
