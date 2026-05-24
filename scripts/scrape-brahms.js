@@ -96,13 +96,13 @@ function extractSection($, headingText) {
     if ($(el).text().trim().toLowerCase() !== normalised) return;
 
     // Collect following sibling text until the next heading of same/higher level
-    const tagName = el.tagName.toLowerCase();
+    const tagLevel = parseInt(el.tagName[1], 10);
     let sibling = $(el).next();
     const parts = [];
 
     while (sibling.length) {
       const sibTag = sibling.prop("tagName");
-      if (sibTag && /^h[1-5]$/i.test(sibTag) && sibTag.toLowerCase() <= tagName) break;
+      if (sibTag && /^h[1-5]$/i.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
       parts.push(sibling.text().trim());
       sibling = sibling.next();
     }
@@ -194,7 +194,7 @@ function extractWigmoreEvent(html, url) {
 
   const resolvedTitle = title || "Wigmore Hall event";
   const resolvedProgramme = normaliseWhitespace(
-    programme || overview || metaDescription || ogDescription || artists || "Brahms programme"
+    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
 
   return {

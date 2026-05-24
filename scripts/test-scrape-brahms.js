@@ -38,12 +38,12 @@ function extractSection($, headingText) {
   let result = "";
   $("h2, h3, h4, h5").each((_, el) => {
     if ($(el).text().trim().toLowerCase() !== normalised) return;
-    const tagName = el.tagName.toLowerCase();
+    const tagLevel = parseInt(el.tagName[1], 10);
     let sibling = $(el).next();
     const parts = [];
     while (sibling.length) {
       const sibTag = sibling.prop("tagName");
-      if (sibTag && /^h[1-5]$/i.test(sibTag) && sibTag.toLowerCase() <= tagName) break;
+      if (sibTag && /^h[1-5]$/i.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
       parts.push(sibling.text().trim());
       sibling = sibling.next();
     }
@@ -94,10 +94,13 @@ console.log("\nextractEventLinks");
     <a href="/about">Skip</a>
   </body></html>`;
   const links = extractEventLinks(html);
+  const june24 = "https://www.wigmore-hall.org.uk/whats-on/202606241300";
+  const june13 = "https://www.wigmore-hall.org.uk/whats-on/202606131930";
+  const notADate = "https://www.wigmore-hall.org.uk/whats-on/not-a-date";
   assert("finds 12-digit event URLs", links.length === 2);
-  assert("includes June 24 event", links.includes("https://www.wigmore-hall.org.uk/whats-on/202606241300"));
-  assert("includes June 13 event", links.includes("https://www.wigmore-hall.org.uk/whats-on/202606131930"));
-  assert("excludes non-event links", !links.includes("https://www.wigmore-hall.org.uk/whats-on/not-a-date"));
+  assert("includes June 24 event", links.some((l) => l === june24));
+  assert("includes June 13 event", links.some((l) => l === june13));
+  assert("excludes non-event links", links.every((l) => l !== notADate));
 }
 
 console.log("\nextractTitle");
