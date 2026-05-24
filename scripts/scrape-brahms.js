@@ -236,9 +236,9 @@ function textContainsTerm(normalisedText, term) {
   }
 
   if (term.includes(" ") && !hasNumberingOrDigits(term)) {
-    const normalisedTokens = splitTerms(normalisedText);
+    const tokenSet = new Set(splitTerms(normalisedText));
     const termTokens = splitTerms(term);
-    return termTokens.every((token) => normalisedTokens.includes(token));
+    return termTokens.every((token) => tokenSet.has(token));
   }
 
   return false;
@@ -253,10 +253,17 @@ function hasNumberingOrDigits(term) {
 }
 
 function findFirstTermPosition(normalisedText, terms) {
+  const tokenPositions = new Map();
+  splitTerms(normalisedText).forEach((token, index) => {
+    if (!tokenPositions.has(token)) {
+      tokenPositions.set(token, index);
+    }
+  });
+
   return terms.reduce((minIndex, term) => {
     const tokens = splitTerms(term);
     const indexes = tokens
-      .map((token) => normalisedText.indexOf(token))
+      .map((token) => tokenPositions.get(token))
       .filter((index) => index >= 0);
     if (indexes.length === 0) return minIndex;
     return Math.min(minIndex, Math.min(...indexes));
