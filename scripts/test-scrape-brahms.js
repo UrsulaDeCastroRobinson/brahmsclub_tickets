@@ -4,64 +4,14 @@
  */
 
 const cheerio = require("cheerio");
-
-// ---------------------------------------------------------------------------
-// Import helpers under test (duplicated here so the test has no side effects)
-// ---------------------------------------------------------------------------
-
-function extractEventLinks(html) {
-  const $ = cheerio.load(html);
-  const links = new Set();
-  $("a[href]").each((_, el) => {
-    const href = $(el).attr("href") || "";
-    if (/^\/whats-on\/\d{12}$/.test(href)) {
-      links.add(`https://www.wigmore-hall.org.uk${href}`);
-    }
-  });
-  return [...links];
-}
-
-function extractTitle(html) {
-  const $ = cheerio.load(html);
-  const h1 = $("h1").first().text().trim();
-  if (h1) return h1;
-  const titleTag = $("title").text().trim();
-  return titleTag.replace(/\s*[|\u2013\u2014-]\s*Wigmore Hall.*$/i, "").trim();
-}
-
-function extractMetaContent($, attribute, value) {
-  return ($(`meta[${attribute}="${value}"]`).attr("content") || "").trim();
-}
-
-function extractSection($, headingText) {
-  const normalised = headingText.toLowerCase();
-  let result = "";
-  $("h2, h3, h4, h5").each((_, el) => {
-    if ($(el).text().trim().toLowerCase() !== normalised) return;
-    const tagLevel = parseInt(el.tagName[1], 10);
-    let sibling = $(el).next();
-    const parts = [];
-    while (sibling.length) {
-      const sibTag = sibling.prop("tagName");
-      if (sibTag && /^h[1-5]$/i.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
-      parts.push(sibling.text().trim());
-      sibling = sibling.next();
-    }
-    const text = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-    if (text) { result = text; return false; }
-  });
-  return result;
-}
-
-function parseEventDateFromUrl(url) {
-  const m = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
-  if (!m) return "";
-  return `${m[1]}-${m[2]}-${m[3]}`;
-}
-
-function containsBrahms(text) {
-  return /\bbrahms\b/i.test(text);
-}
+const {
+  extractEventLinks,
+  extractTitle,
+  extractMetaContent,
+  extractSection,
+  parseEventDateFromUrl,
+  containsBrahms
+} = require("./scrape-brahms");
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -112,7 +62,7 @@ console.log("\nextractTitle");
   const noH1 = `<html><head><title>Brahms Recital | Wigmore Hall</title></head><body></body></html>`;
   assert("strips site suffix from title tag", extractTitle(noH1) === "Brahms Recital");
 
-  const noH1Dash = `<html><head><title>Piano Evening – Wigmore Hall</title></head><body></body></html>`;
+  const noH1Dash = `<html><head><title>Piano Evening \u2013 Wigmore Hall</title></head><body></body></html>`;
   assert("strips em-dash site suffix from title tag", extractTitle(noH1Dash) === "Piano Evening");
 }
 

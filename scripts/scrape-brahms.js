@@ -121,7 +121,7 @@ function extractSection($, headingText) {
  * Extract clean body text from an event page, stripping non-content elements.
  */
 function extractBodyText($) {
-  $("script, style, nav, header, footer, noscript, [aria-hidden='true']").remove();
+  $("script, style, nav, header, footer, noscript").remove();
   return $("body").text().replace(/\s+/g, " ").trim();
 }
 
@@ -308,7 +308,24 @@ async function main() {
   console.log(`Wrote ${items.length} items to ${outputPath}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// Export helpers for testing; only run main() when invoked directly.
+module.exports = {
+  extractEventLinks,
+  extractTitle,
+  extractMetaContent,
+  extractSection,
+  extractBodyText,
+  parseEventDateFromUrl,
+  parseWigmoreDate,
+  containsBrahms,
+  isWithinNextMonth,
+  getNextMonthDateRange,
+  extractWigmoreEvent
+};
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
