@@ -109,7 +109,7 @@ function extractMetaContent(html, attribute, value) {
   const tagMatches = html.match(/<meta\b[^>]*>/gi) || [];
 
   for (const tag of tagMatches) {
-    const attrPattern = new RegExp(`\b${escapedAttr}\s*=\s*(["'])${escapedValue}\\1`, "i");
+    const attrPattern = new RegExp(`\\b${escapedAttr}\\s*=\\s*(["'])${escapedValue}\\1`, "i");
     if (!attrPattern.test(tag)) {
       continue;
     }
