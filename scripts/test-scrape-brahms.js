@@ -181,6 +181,19 @@ console.log("\nextractWigmoreEvent");
 }
 
 {
+  const html = `<html><body>
+    <h1>Chamber recital</h1>
+    <h3>Programme</h3>
+    <p>Brahms: Clarinet Trio in A minor, Op. 114</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
+  assert(
+    "extracts programme work title directly when Programme section is available",
+    event && event.programme === "Clarinet Trio in A minor, Op. 114"
+  );
+}
+
+{
   const html = `<html><head>
     <meta name="description" content="A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114.">
   </head><body><h1>Chamber recital</h1></body></html>`;

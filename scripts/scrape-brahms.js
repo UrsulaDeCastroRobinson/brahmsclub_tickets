@@ -438,9 +438,10 @@ async function collectWigmoreEventLinksWithBrowser() {
     // Require a sustained stable-at-end period before stop.
     const MAX_STABLE_END_ROUNDS = 8;
     const FULL_SCROLL_INTERVAL = 5;
-    // 750ms was chosen empirically; shorter waits intermittently missed newly
-    // appended listing cards before the next extraction pass.
-    const SCROLL_SETTLE_WAIT_MS = 750;
+    // 500ms was chosen empirically; this keeps rounds responsive while still
+    // allowing lazy-loaded cards to append before extraction.
+    const SCROLL_SETTLE_WAIT_MS = 500;
+    const NETWORK_IDLE_TIMEOUT_MS = 2500;
     let stableEndRounds = 0;
 
     for (let i = 0; i < MAX_SCROLL_ROUNDS; i++) {
@@ -452,7 +453,13 @@ async function collectWigmoreEventLinksWithBrowser() {
         window.scrollTo(0, nextY);
       }, { round: i, fullScrollInterval: FULL_SCROLL_INTERVAL });
       await page.waitForTimeout(SCROLL_SETTLE_WAIT_MS);
-      await page.waitForLoadState("networkidle", { timeout: 2500 }).catch(() => {});
+      const networkSettled = await page
+        .waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS })
+        .then(() => true)
+        .catch(() => false);
+      if (!networkSettled) {
+        console.log(`[Wigmore discovery] round ${i + 1}: networkidle wait timed out after ${NETWORK_IDLE_TIMEOUT_MS}ms`);
+      }
 
       const links = await extractRenderedEventLinks(page);
       links.forEach((l) => eventLinkSet.add(l));
