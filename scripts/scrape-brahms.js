@@ -164,18 +164,28 @@ function normaliseWhitespace(value) {
 
 const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
   /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i;
-const COMPOSER_NAME_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*)?";
+const COMPOSER_NAME_PART_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*";
+const COMPOSER_NAME_PATTERN = `${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN})?`;
 const PROGRAMME_SPLIT_REGEX = /\s*(?:[|•·;])\s*/;
 const BRAHMS_PREFIX_REGEX = /^(?:johannes\s+)?brahms\b(?:\s*\(?\d{4}\s*[-–—]\s*\d{4}\)?)?/iu;
 // Wigmore composer headings are typically one to four words (e.g. "Franz Schubert").
-const MAX_COMPOSER_NAME_PARTS = 3;
+const MAX_ADDITIONAL_COMPOSER_NAME_PARTS = 3;
 const COMPOSER_HEADING_REGEX = new RegExp(
-  `^[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*){0,${MAX_COMPOSER_NAME_PARTS}}(?:\\s+\\d{4}\\s*[-–—]\\s*\\d{4})?$`,
+  `^${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN}){0,${MAX_ADDITIONAL_COMPOSER_NAME_PARTS}}(?:\\s+\\d{4}\\s*[-–—]\\s*\\d{4})?$`,
   "u"
 );
 const NON_WORK_LINE_REGEX = /\b(?:recital|concert|programme|program|overview|artist|featuring|performed by|with|alongside|hosted by)\b/i;
 const WORK_TITLE_HINT_REGEX = /\b(?:op\.?|opus|no\.?|sonata|trio|quartet|quintet|sextet|septet|octet|concerto|symphony|rhapsody|intermezzi|variations|waltz|ballade|fantasy|lied|songs?)\b/i;
-const PERFORMER_LINE_REGEX = /^[\p{Lu}][\p{L}'’.-]*(?:\s+[\p{Lu}][\p{L}'’.-]*){0,4}\s+(?:violin|viola|cello|piano|soprano|mezzo-soprano|tenor|baritone|bass|conductor)\b/ui;
+const PERFORMER_ROLE_TERMS = [
+  "violin", "viola", "cello", "piano", "clarinet", "flute", "oboe", "horn",
+  "trumpet", "trombone", "harp", "guitar", "organ", "soprano", "mezzo-soprano",
+  "tenor", "baritone", "bass", "conductor",
+];
+const PERFORMER_ROLE_PATTERN = PERFORMER_ROLE_TERMS.map((role) => role.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")).join("|");
+const PERFORMER_LINE_REGEX = new RegExp(
+  `^${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN}){0,4}\\s+(?:${PERFORMER_ROLE_PATTERN})\\b`,
+  "iu"
+);
 const MAX_WORK_TITLE_LENGTH = 140;
 const SENTENCE_PUNCTUATION_REGEX = /[!?]|[.](?:\s+[A-Z]|$)/;
 
