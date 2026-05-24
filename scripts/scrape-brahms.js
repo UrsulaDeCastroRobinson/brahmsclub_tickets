@@ -109,9 +109,7 @@ function extractSection($, headingText) {
       sibling = sibling.next();
     }
 
-    // Preserve section item boundaries so downstream programme parsing can keep
-    // composer headings and work titles as separate chunks.
-    const text = parts.filter(Boolean).join(" | ").replace(/\s+/g, " ").trim();
+    const text = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     if (text) {
       result = text;
       return false; // stop iterating once the first matching section is found
@@ -162,141 +160,10 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
-  /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i;
-const COMPOSER_NAME_PART_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*";
-const COMPOSER_NAME_PATTERN = `${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN})?`;
-const PROGRAMME_SPLIT_REGEX = /\s*(?:[|•·;])\s*/;
-const BRAHMS_PREFIX_REGEX = /^(?:johannes\s+)?brahms\b(?:\s*\(?\d{4}\s*[-–—]\s*\d{4}\)?)?/iu;
-// Wigmore composer headings are typically one to four words (e.g. "Franz Schubert").
-const MAX_ADDITIONAL_COMPOSER_NAME_PARTS = 3;
-const COMPOSER_HEADING_REGEX = new RegExp(
-  `^${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN}){0,${MAX_ADDITIONAL_COMPOSER_NAME_PARTS}}(?:\\s+\\d{4}\\s*[-–—]\\s*\\d{4})?$`,
-  "u"
-);
-const NON_WORK_LINE_REGEX = /\b(?:recital|concert|programme|program|overview|artist|featuring|performed by|with|alongside|hosted by)\b/i;
-const WORK_TITLE_HINT_REGEX = /\b(?:op\.?|opus|no\.?|sonata|trio|quartet|quintet|sextet|septet|octet|concerto|symphony|rhapsody|intermezzi|variations|waltz|ballade|fantasy|lied|songs?)\b/i;
-const PERFORMER_ROLE_TERMS = [
-  "violin", "viola", "cello", "piano", "clarinet", "flute", "oboe", "horn",
-  "trumpet", "trombone", "harp", "guitar", "organ", "soprano", "mezzo-soprano",
-  "tenor", "baritone", "bass", "conductor",
-];
-const PERFORMER_ROLE_PATTERN = PERFORMER_ROLE_TERMS.join("|");
-const PERFORMER_LINE_REGEX = new RegExp(
-  `^${COMPOSER_NAME_PART_PATTERN}(?:\\s+${COMPOSER_NAME_PART_PATTERN}){0,4}\\s+(?:${PERFORMER_ROLE_PATTERN})\\b`,
-  "iu"
-);
-// Typical single work titles fit comfortably below this; longer strings are
-// usually sentence-like programme prose we want to exclude.
-const MAX_WORK_TITLE_LENGTH = 140;
-const SENTENCE_PUNCTUATION_REGEX = /[!?]|[.](?:\s+[A-Z]|$)/;
-
-function dedupeCaseInsensitive(values) {
-  const seen = new Set();
-  const result = [];
-  for (const value of values) {
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(value);
-  }
-  return result;
-}
-
-function cleanBrahmsWork(value) {
-  return normaliseWhitespace(value)
-    .replace(BRAHMS_PREFIX_REGEX, "")
-    .replace(/^[-:–—\s]+/, "")
-    .replace(BRAHMS_DESCRIPTIVE_SUFFIX_REGEX, "")
-    .replace(/[.,;:!?]+$/, "")
-    .trim();
-}
-
-function cleanBrahmsEntry(value) {
-  let entry = normaliseWhitespace(value);
-  const idx = entry.toLowerCase().indexOf("brahms");
-  if (idx < 0) return "";
-  if (idx > 0) entry = entry.slice(idx);
-
-  entry = entry
-    .replace(BRAHMS_DESCRIPTIVE_SUFFIX_REGEX, "")
-    .replace(/[.,;:!?]+$/, "")
-    .trim();
-
-  if (!entry || !/^brahms\b/i.test(entry)) return "";
-
-  if (/^brahms\s*:/i.test(entry)) {
-    const work = cleanBrahmsWork(entry.replace(/^brahms\s*:/i, ""));
-    return work ? `Brahms: ${work}` : "";
-  }
-
-  return entry.replace(/^brahms\b/i, "Brahms");
-}
-
-function isLikelyWorkTitle(value) {
-  if (!value) return false;
-  if (NON_WORK_LINE_REGEX.test(value) || PERFORMER_LINE_REGEX.test(value)) return false;
-  if (WORK_TITLE_HINT_REGEX.test(value)) return true;
-  if (SENTENCE_PUNCTUATION_REGEX.test(value) || value.length > MAX_WORK_TITLE_LENGTH) return false;
-  const words = value.split(/\s+/).length;
-  return words >= 2 && words <= 12;
-}
-
-function extractBrahmsEntriesFromText(text) {
-  const value = normaliseWhitespace(text || "");
-  if (!value || !containsBrahms(value)) return [];
-
-  const entries = [];
-  const composerTaggedRegex = new RegExp(
-    `\\bbrahms\\b\\s*:\\s*([\\s\\S]*?)(?=(?:\\b${COMPOSER_NAME_PATTERN}\\s*:)|[|•·;]|$)`,
-    "giu"
+function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, artists, bodyText }) {
+  return normaliseWhitespace(
+    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
-  let match;
-
-  while ((match = composerTaggedRegex.exec(value)) !== null) {
-    const work = cleanBrahmsWork(match[1]);
-    if (work) entries.push(work);
-  }
-
-  if (entries.length > 0) {
-    return dedupeCaseInsensitive(entries);
-  }
-
-  const chunks = value.split(PROGRAMME_SPLIT_REGEX).filter(Boolean);
-  let inBrahmsBlock = false;
-  for (const chunk of chunks) {
-    const cleanedChunk = normaliseWhitespace(chunk);
-    if (!cleanedChunk) continue;
-
-    if (containsBrahms(cleanedChunk)) {
-      const work = cleanBrahmsWork(cleanedChunk);
-      if (work) entries.push(work);
-      inBrahmsBlock = true;
-      continue;
-    }
-
-    if (!inBrahmsBlock) continue;
-
-    if (COMPOSER_HEADING_REGEX.test(cleanedChunk)) {
-      inBrahmsBlock = false;
-      continue;
-    }
-
-    const work = cleanBrahmsWork(cleanedChunk);
-    if (!isLikelyWorkTitle(work)) continue;
-    entries.push(work);
-  }
-
-  return dedupeCaseInsensitive(entries);
-}
-
-function resolveWigmoreProgramme({ programme }) {
-  const programmeEntries = extractBrahmsEntriesFromText(programme);
-  if (programmeEntries.length > 0) {
-    return programmeEntries.join(" / ");
-  }
-
-  return "Brahms work";
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +203,11 @@ function extractWigmoreEvent(html, url) {
   const resolvedTitle = title || "Wigmore Hall event";
   const resolvedProgramme = resolveWigmoreProgramme({
     programme,
+    overview,
+    metaDescription,
+    ogDescription,
+    artists,
+    bodyText,
   });
 
   return {
