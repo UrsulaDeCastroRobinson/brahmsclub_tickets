@@ -195,9 +195,12 @@ function parseWigmoreDate(dateText, url) {
 }
 
 function containsBrahms(text) {
-  // Some extraction paths can collapse adjacent tokens (e.g. "BrahmsViolin"),
-  // so split lowercase-uppercase boundaries before word-boundary matching.
-  const value = (text || "").replace(/([a-z])([A-Z])/g, "$1 $2");
+  // Some extraction paths can collapse adjacent tokens (e.g. "BrahmsViolin" or
+  // "Brahms1833" when element text is concatenated without spaces), so split on
+  // both lowercase→uppercase and letter→digit boundaries before word-boundary matching.
+  const value = (text || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Za-z])(\d)/g, "$1 $2");
   return /\bbrahms\b/i.test(value);
 }
 
@@ -304,6 +307,53 @@ function cleanStructuredWorkTitle(text) {
   );
 }
 
+/**
+ * Add a comma before "Op." when not already preceded by a comma.
+ * E.g. "String Quintet in F Op. 88" → "String Quintet in F, Op. 88".
+ */
+function normaliseWorkTitleOpComma(title) {
+  return title.replace(/([^,])\s+([Oo]p\.)/, "$1, $2");
+}
+
+/**
+ * Extract Brahms work titles from Wigmore Hall's native repertoire item markup.
+ * Targets .repertoire-work-item elements where the composer name appears in the
+ * left-side artist link and performed work titles appear in the right-side
+ * .repertoire-list .rich-text.inline.bold elements.
+ * Returns an array of work title strings, canonicalised through the catalog where
+ * a confident match exists, otherwise lightly normalised.
+ */
+function extractBrahmsWorksFromWigmoreRepertoire($) {
+  const titles = [];
+
+  $(".repertoire-work-item").each((_, item) => {
+    const composerText = $(item).find("a[href^='/artists/']").first().text().trim();
+    if (!containsBrahms(composerText)) return;
+
+    $(item).find(".repertoire-list .rich-text.inline.bold").each((_, workEl) => {
+      const rawTitle = normaliseWhitespace($(workEl).text());
+      if (!rawTitle) return;
+
+      const matched = findBrahmsProgrammeMatches(rawTitle);
+      if (matched.length >= 1) {
+        matched.forEach((t) => titles.push(t));
+      } else {
+        titles.push(normaliseWorkTitleOpComma(rawTitle));
+      }
+    });
+  });
+
+  const deduped = new Map();
+  titles.forEach((title) => {
+    const key = normaliseForMatch(title);
+    if (key && !deduped.has(key)) {
+      deduped.set(key, title);
+    }
+  });
+
+  return [...deduped.values()];
+}
+
 function extractBrahmsWorksFromStructuredProgramme(items) {
   const titles = [];
 
@@ -351,12 +401,19 @@ function resolveWigmoreProgramme({
   ogDescription,
   artists,
   bodyText,
-  structuredProgrammeItems
+  structuredProgrammeItems,
+  wigmoreRepertoireWorks
 }) {
   const fallback = normaliseWhitespace(
     programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
 
+  // Priority 1: Wigmore-specific repertoire item markup (.repertoire-work-item)
+  if ((wigmoreRepertoireWorks || []).length > 0) {
+    return wigmoreRepertoireWorks.join(" / ");
+  }
+
+  // Priority 2: Generic structured Programme section parsing
   const structuredMatches = extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems || []);
   if (structuredMatches.length > 0) {
     return structuredMatches.join(" / ");
@@ -390,6 +447,7 @@ function extractWigmoreEvent(html, url) {
   const ogDescription = extractMetaContent($, "property", "og:description");
   const programme = extractSection($, "Programme");
   const structuredProgrammeItems = extractStructuredProgrammeItems($);
+  const wigmoreRepertoireWorks = extractBrahmsWorksFromWigmoreRepertoire($);
   const overview = extractSection($, "Overview");
   const artists = extractSection($, "Artists");
 
@@ -418,6 +476,7 @@ function extractWigmoreEvent(html, url) {
     artists,
     bodyText,
     structuredProgrammeItems,
+    wigmoreRepertoireWorks,
   });
 
   return {
