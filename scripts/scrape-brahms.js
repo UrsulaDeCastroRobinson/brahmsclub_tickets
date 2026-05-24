@@ -28,17 +28,25 @@ function getNextMonthLabel() {
   return start.toLocaleString("en-GB", { month: "long", year: "numeric" });
 }
 
-function stripTags(value) {
+function decodeEntities(value) {
   return value
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function stripTags(value) {
+  return decodeEntities(
+    value
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 function extractEventLinks(html) {
@@ -56,14 +64,23 @@ function extractEventLinks(html) {
   return [...links];
 }
 
-function parseWigmoreDate(raw) {
+function parseWigmoreDate(raw, url) {
   const match = raw.match(/([A-Za-z]{3})\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
-  if (!match) return "";
+  if (match) {
+    const [, , day, month, year] = match;
+    const parsed = new Date(`${day} ${month} ${year} 12:00:00 UTC`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+  }
 
-  const [, , day, month, year] = match;
-  const parsed = new Date(`${day} ${month} ${year} 12:00:00 UTC`);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toISOString().slice(0, 10);
+  const urlMatch = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
+  if (urlMatch) {
+    const [, year, month, day] = urlMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  return "";
 }
 
 function extractSection(html, heading) {
@@ -84,9 +101,19 @@ function extractTitleTag(html) {
 }
 
 function extractMetaContent(html, attribute, value) {
-  const regex = new RegExp(`<meta[^>]+${attribute}=["']${value}["'][^>]+content=["']([\\s\\S]*?)["'][^>]*>`, "i");
-  const match = html.match(regex);
-  return match ? stripTags(match[1]) : "";
+  const patterns = [
+    new RegExp(`<meta[^>]*${attribute}=["']${value}["'][^>]*content=["']([\\s\\S]*?)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]*content=["']([\\s\\S]*?)["'][^>]*${attribute}=["']${value}["'][^>]*>`, "i")
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match) {
+      return decodeEntities(match[1]).trim();
+    }
+  }
+
+  return "";
 }
 
 function normaliseWhitespace(value) {
@@ -130,7 +157,7 @@ function extractWigmoreEvent(html, url) {
   const programme = extractSection(html, "Programme");
   const overview = extractSection(html, "Overview");
   const artists = extractSection(html, "Artists");
-  const date = parseWigmoreDate(dateSection);
+  const date = parseWigmoreDate(dateSection, url);
 
   const combinedText = [title, titleTag, metaDescription, ogDescription, programme, overview, artists]
     .filter(Boolean)
