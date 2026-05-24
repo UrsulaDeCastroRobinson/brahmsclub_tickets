@@ -4,6 +4,16 @@ const path = require("path");
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
 
+const browserHeaders = {
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "accept-language": "en-GB,en;q=0.9,en-US;q=0.8",
+  "cache-control": "no-cache",
+  "pragma": "no-cache",
+  "referer": "https://www.google.com/",
+  "upgrade-insecure-requests": "1"
+};
+
 function getNextMonthDateRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -101,35 +111,44 @@ function isWithinNextMonth(dateString) {
   return parsed >= start && parsed <= end;
 }
 
-async function scrapeWigmoreHall(source) {
-  const listingUrl = "https://www.wigmore-hall.org.uk/whats-on";
-  const response = await fetch(listingUrl, {
-    headers: {
-      "user-agent": "brahmsclub-bot/1.0 (+https://github.com/UrsulaDeCastroRobinson/brahmsclub_tickets)"
-    }
-  });
-
+async function fetchHtml(url) {
+  const response = await fetch(url, { headers: browserHeaders });
   if (!response.ok) {
-    throw new Error(`Failed to fetch Wigmore Hall listings: ${response.status}`);
+    throw new Error(`Failed to fetch ${url}: ${response.status}`);
+  }
+  return response.text();
+}
+
+async function scrapeWigmoreHall(source) {
+  const listingUrls = [
+    "https://www.wigmore-hall.org.uk/whats-on",
+    "https://www.wigmore-hall.org.uk/whats-on?page=1"
+  ];
+
+  let listingHtml = "";
+  let lastError = null;
+
+  for (const listingUrl of listingUrls) {
+    try {
+      listingHtml = await fetchHtml(listingUrl);
+      if (listingHtml) {
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  const listingHtml = await response.text();
+  if (!listingHtml) {
+    throw lastError || new Error("Unable to fetch Wigmore Hall listings");
+  }
+
   const eventLinks = extractEventLinks(listingHtml);
   const items = [];
 
   for (const eventUrl of eventLinks.slice(0, 60)) {
     try {
-      const eventResponse = await fetch(eventUrl, {
-        headers: {
-          "user-agent": "brahmsclub-bot/1.0 (+https://github.com/UrsulaDeCastroRobinson/brahmsclub_tickets)"
-        }
-      });
-
-      if (!eventResponse.ok) {
-        continue;
-      }
-
-      const eventHtml = await eventResponse.text();
+      const eventHtml = await fetchHtml(eventUrl);
       const event = extractWigmoreEvent(eventHtml, eventUrl);
 
       if (event && isWithinNextMonth(event.date)) {
