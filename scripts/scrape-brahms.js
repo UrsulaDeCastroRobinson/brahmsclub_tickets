@@ -501,7 +501,19 @@ function extractWigmoreEvent(html, url) {
     .filter(Boolean)
     .join(" ");
 
-  if (!containsBrahms(combinedText)) {
+  // Retain the event when Brahms is evidenced by any reliable path:
+  // 1. literal "Brahms" in the flattened page text, OR
+  // 2. the Wigmore repertoire DOM extractor already resolved Brahms works
+  //    (runs before extractBodyText mutates $, so it can see content that
+  //    extractBodyText later strips — e.g. inside <footer>/<nav>/<noscript>), OR
+  // 3. the structured Programme section contains a row/item attributed to Brahms.
+  const hasBrahmsInText = containsBrahms(combinedText);
+  const hasBrahmsInRepertoire = wigmoreRepertoireWorks.length > 0;
+  const hasBrahmsInStructuredProgramme = structuredProgrammeItems.some(
+    (item) => item.some((part) => containsBrahms(part))
+  );
+
+  if (!hasBrahmsInText && !hasBrahmsInRepertoire && !hasBrahmsInStructuredProgramme) {
     return null;
   }
 
