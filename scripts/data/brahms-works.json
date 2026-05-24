@@ -130,7 +130,11 @@
     "opus": "88",
     "aliases": [
       "String Quintet No. 1 in F major, Op. 88",
-      "String Quintet No. 1 in F major Op. 88"
+      "String Quintet No. 1 in F major Op. 88",
+      "String Quintet in F major, Op. 88",
+      "String Quintet in F major Op. 88",
+      "String Quintet in F, Op. 88",
+      "String Quintet in F Op. 88"
     ],
     "required_terms": ["string", "quintet", "no 1"],
     "optional_terms": ["f major", "op 88"]
