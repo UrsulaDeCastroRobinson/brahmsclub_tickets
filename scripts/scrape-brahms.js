@@ -14,18 +14,16 @@ const browserHeaders = {
   "upgrade-insecure-requests": "1"
 };
 
-const debugEventUrl = "https://www.wigmore-hall.org.uk/whats-on/202606131930";
-
 function getNextMonthDateRange() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  const start = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+  const end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 2, 0));
   return { start, end };
 }
 
 function getNextMonthLabel() {
   const { start } = getNextMonthDateRange();
-  return start.toLocaleString("en-GB", { month: "long", year: "numeric" });
+  return start.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function decodeEntities(value) {
@@ -64,6 +62,13 @@ function extractEventLinks(html) {
   return [...links];
 }
 
+function parseEventDateFromUrl(url) {
+  const urlMatch = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
+  if (!urlMatch) return "";
+  const [, year, month, day] = urlMatch;
+  return `${year}-${month}-${day}`;
+}
+
 function parseWigmoreDate(raw, url) {
   const match = raw.match(/([A-Za-z]{3})\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
   if (match) {
@@ -74,13 +79,7 @@ function parseWigmoreDate(raw, url) {
     }
   }
 
-  const urlMatch = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
-  if (urlMatch) {
-    const [, year, month, day] = urlMatch;
-    return `${year}-${month}-${day}`;
-  }
-
-  return "";
+  return parseEventDateFromUrl(url);
 }
 
 function extractSection(html, heading) {
@@ -100,16 +99,24 @@ function extractTitleTag(html) {
   return match ? stripTags(match[1]) : "";
 }
 
-function extractMetaContent(html, attribute, value) {
-  const patterns = [
-    new RegExp(`<meta[^>]*${attribute}=["']${value}["'][^>]*content=["']([\\s\\S]*?)["'][^>]*>`, "i"),
-    new RegExp(`<meta[^>]*content=["']([\\s\\S]*?)["'][^>]*${attribute}=["']${value}["'][^>]*>`, "i")
-  ];
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match) {
-      return decodeEntities(match[1]).trim();
+function extractMetaContent(html, attribute, value) {
+  const escapedAttr = escapeRegex(attribute);
+  const escapedValue = escapeRegex(value);
+  const tagMatches = html.match(/<meta\b[^>]*>/gi) || [];
+
+  for (const tag of tagMatches) {
+    const attrPattern = new RegExp(`\b${escapedAttr}\s*=\s*(["'])${escapedValue}\\1`, "i");
+    if (!attrPattern.test(tag)) {
+      continue;
+    }
+
+    const contentMatch = tag.match(/\bcontent\s*=\s*(["'])([\s\S]*?)\1/i);
+    if (contentMatch) {
+      return decodeEntities(contentMatch[2]).trim();
     }
   }
 
@@ -120,35 +127,27 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function logDebugForKnownEvent(html, url) {
-  if (url !== debugEventUrl) {
-    return;
-  }
+function isWithinNextMonth(dateString) {
+  if (!dateString) return false;
+  const parsed = new Date(`${dateString}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const { start, end } = getNextMonthDateRange();
+  return parsed >= start && parsed <= end;
+}
 
-  const lowerHtml = html.toLowerCase();
-  const brahmsIndex = lowerHtml.indexOf("brahms");
-  const titleTag = extractTitleTag(html);
-  const metaDescription = extractMetaContent(html, "name", "description");
-  const ogDescription = extractMetaContent(html, "property", "og:description");
+function isAfterNextMonth(dateString) {
+  if (!dateString) return false;
+  const parsed = new Date(`${dateString}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const { end } = getNextMonthDateRange();
+  return parsed > end;
+}
 
-  console.log(`[wigmore-debug] url: ${url}`);
-  console.log(`[wigmore-debug] html length: ${html.length}`);
-  console.log(`[wigmore-debug] title tag: ${titleTag || "(none)"}`);
-  console.log(`[wigmore-debug] meta description: ${metaDescription || "(none)"}`);
-  console.log(`[wigmore-debug] og description: ${ogDescription || "(none)"}`);
-  console.log(`[wigmore-debug] contains brahms: ${brahmsIndex !== -1}`);
-
-  if (brahmsIndex !== -1) {
-    const start = Math.max(0, brahmsIndex - 250);
-    const end = Math.min(html.length, brahmsIndex + 350);
-    console.log(`[wigmore-debug] snippet around brahms:`);
-    console.log(html.slice(start, end));
-  }
+function containsBrahms(text) {
+  return /\bbrahms\b/i.test(text);
 }
 
 function extractWigmoreEvent(html, url) {
-  logDebugForKnownEvent(html, url);
-
   const title = extractHeadingText(html);
   const titleTag = extractTitleTag(html);
   const metaDescription = extractMetaContent(html, "name", "description");
@@ -157,22 +156,19 @@ function extractWigmoreEvent(html, url) {
   const programme = extractSection(html, "Programme");
   const overview = extractSection(html, "Overview");
   const artists = extractSection(html, "Artists");
+  const bodyText = stripTags(html);
   const date = parseWigmoreDate(dateSection, url);
 
-  const combinedText = [title, titleTag, metaDescription, ogDescription, programme, overview, artists]
+  const combinedText = [title, titleTag, metaDescription, ogDescription, programme, overview, artists, bodyText]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .join(" ");
 
-  if (!combinedText.includes("brahms")) {
-    console.log(`[wigmore] skip no brahms: ${url}`);
+  if (!containsBrahms(combinedText)) {
     return null;
   }
 
   const resolvedTitle = title || titleTag || "Wigmore Hall event";
-  const resolvedProgramme = normaliseWhitespace(programme || overview || metaDescription || ogDescription || artists || "Brahms programme");
-
-  console.log(`[wigmore] brahms match: ${resolvedTitle} | ${date || "(no-date)"}`);
+  const resolvedProgramme = normaliseWhitespace(programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme");
 
   return {
     title: resolvedTitle,
@@ -184,14 +180,6 @@ function extractWigmoreEvent(html, url) {
   };
 }
 
-function isWithinNextMonth(dateString) {
-  if (!dateString) return false;
-  const parsed = new Date(`${dateString}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return false;
-  const { start, end } = getNextMonthDateRange();
-  return parsed >= start && parsed <= end;
-}
-
 async function fetchHtml(url) {
   const response = await fetch(url, { headers: browserHeaders });
   if (!response.ok) {
@@ -200,66 +188,70 @@ async function fetchHtml(url) {
   return response.text();
 }
 
-async function scrapeWigmoreHall(source) {
-  const listingUrls = [
-    "https://www.wigmore-hall.org.uk/whats-on",
-    "https://www.wigmore-hall.org.uk/whats-on?page=1",
-    "https://www.wigmore-hall.org.uk/whats-on?page=2",
-    "https://www.wigmore-hall.org.uk/whats-on?page=3",
-    "https://www.wigmore-hall.org.uk/whats-on?page=4",
-    "https://www.wigmore-hall.org.uk/whats-on?page=5",
-    "https://www.wigmore-hall.org.uk/whats-on?page=6"
-  ];
-
+async function collectWigmoreEventLinks() {
   const eventLinkSet = new Set();
+  let stalePages = 0;
 
-  for (const listingUrl of listingUrls) {
+  for (let page = 0; page < 15; page += 1) {
+    const listingUrl = page === 0
+      ? "https://www.wigmore-hall.org.uk/whats-on"
+      : `https://www.wigmore-hall.org.uk/whats-on?page=${page}`;
+
     try {
-      console.log(`[wigmore] fetching listing: ${listingUrl}`);
       const listingHtml = await fetchHtml(listingUrl);
-      console.log(`[wigmore] fetched listing (${listingHtml.length} chars)`);
       const pageLinks = extractEventLinks(listingHtml);
-      console.log(`[wigmore] found ${pageLinks.length} candidate links on ${listingUrl}`);
+      const newLinks = pageLinks.filter((link) => !eventLinkSet.has(link));
+
       pageLinks.forEach((link) => eventLinkSet.add(link));
+
+      if (newLinks.length === 0) {
+        stalePages += 1;
+      } else {
+        stalePages = 0;
+      }
+
+      const linkDates = newLinks
+        .map(parseEventDateFromUrl)
+        .filter(Boolean)
+        .sort();
+
+      if (linkDates.length > 0 && linkDates.every(isAfterNextMonth)) {
+        break;
+      }
+
+      if (stalePages >= 2) {
+        break;
+      }
     } catch (error) {
-      console.log(`[wigmore] listing fetch failed: ${listingUrl} -> ${error.message}`);
+      console.error(`Failed to fetch Wigmore Hall listing ${listingUrl}:`, error.message);
     }
   }
 
-  const eventLinks = [...eventLinkSet].sort();
-  console.log(`[wigmore] total unique event links: ${eventLinks.length}`);
-  console.log(`[wigmore] sample links: ${eventLinks.slice(0, 10).join(", ") || "(none)"}`);
+  return [...eventLinkSet].sort();
+}
 
+async function scrapeWigmoreHall(source) {
+  const eventLinks = await collectWigmoreEventLinks();
   const items = [];
 
-  for (const eventUrl of eventLinks.slice(0, 200)) {
+  for (const eventUrl of eventLinks) {
     try {
-      console.log(`[wigmore] fetching event: ${eventUrl}`);
+      const eventDate = parseEventDateFromUrl(eventUrl);
+      if (eventDate && isAfterNextMonth(eventDate)) {
+        break;
+      }
+
       const eventHtml = await fetchHtml(eventUrl);
       const event = extractWigmoreEvent(eventHtml, eventUrl);
 
-      if (!event) {
-        continue;
+      if (event && event.date && isWithinNextMonth(event.date)) {
+        items.push(event);
       }
-
-      if (!event.date) {
-        console.log(`[wigmore] skip no parsed date: ${eventUrl}`);
-        continue;
-      }
-
-      if (!isWithinNextMonth(event.date)) {
-        console.log(`[wigmore] skip outside next month: ${event.title} | ${event.date}`);
-        continue;
-      }
-
-      console.log(`[wigmore] keep event: ${event.title} | ${event.date}`);
-      items.push(event);
     } catch (error) {
       console.error(`Failed to fetch Wigmore Hall event ${eventUrl}:`, error.message);
     }
   }
 
-  console.log(`[wigmore] kept ${items.length} events after filtering`);
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
 
