@@ -14,6 +14,8 @@ const browserHeaders = {
   "upgrade-insecure-requests": "1"
 };
 
+const debugEventUrl = "https://www.wigmore-hall.org.uk/whats-on/202606131930";
+
 function getNextMonthDateRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -80,7 +82,39 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function logDebugForKnownEvent(html, url) {
+  if (url !== debugEventUrl) {
+    return;
+  }
+
+  const lowerHtml = html.toLowerCase();
+  const brahmsIndex = lowerHtml.indexOf("brahms");
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+
+  console.log(`[wigmore-debug] url: ${url}`);
+  console.log(`[wigmore-debug] html length: ${html.length}`);
+  console.log(`[wigmore-debug] title tag: ${titleMatch ? stripTags(titleMatch[1]) : "(none)"}`);
+  console.log(`[wigmore-debug] contains brahms: ${brahmsIndex !== -1}`);
+
+  if (brahmsIndex !== -1) {
+    const start = Math.max(0, brahmsIndex - 250);
+    const end = Math.min(html.length, brahmsIndex + 350);
+    console.log(`[wigmore-debug] snippet around brahms:`);
+    console.log(html.slice(start, end));
+  }
+
+  if (jsonLdMatch) {
+    console.log(`[wigmore-debug] json-ld snippet:`);
+    console.log(jsonLdMatch[1].slice(0, 1200));
+  } else {
+    console.log(`[wigmore-debug] json-ld snippet: (none)`);
+  }
+}
+
 function extractWigmoreEvent(html, url) {
+  logDebugForKnownEvent(html, url);
+
   const title = extractHeadingText(html);
   const dateSection = extractSection(html, "Date");
   const programme = extractSection(html, "Programme");
