@@ -335,7 +335,7 @@ function extractBrahmsWorksFromWigmoreRepertoire($) {
       if (!rawTitle) return;
 
       const matched = findBrahmsProgrammeMatches(rawTitle);
-      if (matched.length >= 1) {
+      if (matched.length > 0) {
         matched.forEach((t) => titles.push(t));
       } else {
         titles.push(normaliseWorkTitleOpComma(rawTitle));
@@ -409,7 +409,7 @@ function resolveWigmoreProgramme({
   );
 
   // Priority 1: Wigmore-specific repertoire item markup (.repertoire-work-item)
-  if ((wigmoreRepertoireWorks || []).length > 0) {
+  if (wigmoreRepertoireWorks.length > 0) {
     return wigmoreRepertoireWorks.join(" / ");
   }
 
