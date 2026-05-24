@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "scrape:brahms": "node scripts/scrape-brahms.js",
-    "test:scrape": "node scripts/test-scrape-brahms.js"
+    "test:scrape": "node scripts/test-scrape-brahms.js",
+    "playwright:install": "playwright install chromium --with-deps"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.42.5",
     "cheerio": "^1.2.0",
     "next": "14.2.3",
     "nodemailer": "^6.9.13",
+    "playwright": "^1.60.0",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }

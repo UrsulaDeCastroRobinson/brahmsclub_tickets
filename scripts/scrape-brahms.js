@@ -226,12 +226,91 @@ async function fetchHtml(url) {
 // ---------------------------------------------------------------------------
 
 /**
- * Crawl Wigmore Hall listing pages 0–20, collect all event URLs, then filter
- * to those whose URL-encoded date falls within the next calendar month.
- * Scanning a fixed range avoids fragile early-termination heuristics that
- * caused late-month events to be missed.
+ * Extract event links from the currently rendered Playwright page DOM.
+ * @param {import('playwright').Page} page
+ * @returns {Promise<string[]>}
  */
-async function collectWigmoreEventLinks() {
+async function extractRenderedEventLinks(page) {
+  return page.$$eval("a[href]", (els) =>
+    els
+      .map((el) => el.getAttribute("href") || "")
+      .filter((href) => /^\/whats-on\/\d{12}$/.test(href))
+      .map((href) => `https://www.wigmore-hall.org.uk${href}`)
+  );
+}
+
+/**
+ * Discover Wigmore Hall event links by rendering the listing page with a
+ * headless browser and scrolling to trigger lazy-loaded / infinite-scroll content.
+ * @returns {Promise<string[]>} Array of full event URLs within the next calendar month, sorted.
+ */
+async function collectWigmoreEventLinksWithBrowser() {
+  let chromium;
+  try {
+    ({ chromium } = require("playwright"));
+  } catch (_) {
+    throw new Error(
+      "playwright is not installed. Run: npm install && npm run playwright:install"
+    );
+  }
+
+  const eventLinkSet = new Set();
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ userAgent: browserHeaders["user-agent"] });
+    const page = await context.newPage();
+
+    await page.goto("https://www.wigmore-hall.org.uk/whats-on", {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+
+    // Scroll repeatedly to trigger lazy loading; stop once the link count stabilises
+    // across three consecutive scroll attempts (no new links loaded).
+    // 30 scrolls provides enough headroom to load a full month of events from a
+    // typical Wigmore Hall listing page without waiting indefinitely.
+    const MAX_SCROLLS = 30;
+    let previousCount = 0;
+    let stableRounds = 0;
+
+    for (let i = 0; i < MAX_SCROLLS; i++) {
+      const links = await extractRenderedEventLinks(page);
+      links.forEach((l) => eventLinkSet.add(l));
+
+      if (eventLinkSet.size === previousCount) {
+        stableRounds++;
+        if (stableRounds >= 3) break;
+      } else {
+        stableRounds = 0;
+        previousCount = eventLinkSet.size;
+      }
+
+      // Scroll to bottom and wait for new content to render
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      // Wait for network activity from lazy loading to settle before extracting new links
+      await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+    }
+
+    // Final pass after all scrolling is complete
+    const finalLinks = await extractRenderedEventLinks(page);
+    finalLinks.forEach((l) => eventLinkSet.add(l));
+
+    console.log(`Browser discovery: found ${eventLinkSet.size} total Wigmore event link(s)`);
+  } finally {
+    await browser.close();
+  }
+
+  return [...eventLinkSet]
+    .filter((url) => isWithinNextMonth(parseEventDateFromUrl(url)))
+    .sort();
+}
+
+/**
+ * Fallback: crawl Wigmore Hall listing pages 0–20 using plain HTTP fetches.
+ * This works for statically-rendered events but may miss lazy-loaded content.
+ * @returns {Promise<string[]>} Array of full event URLs within the next calendar month, sorted.
+ */
+async function collectWigmoreEventLinksStatic() {
   const eventLinkSet = new Set();
 
   for (let page = 0; page <= 20; page += 1) {
@@ -251,6 +330,21 @@ async function collectWigmoreEventLinks() {
   return [...eventLinkSet]
     .filter((url) => isWithinNextMonth(parseEventDateFromUrl(url)))
     .sort();
+}
+
+/**
+ * Discover Wigmore Hall event links for the next calendar month.
+ * Attempts browser-based rendering first to handle lazy-loaded listing pages;
+ * falls back to static HTML fetching if Playwright is unavailable.
+ * @returns {Promise<string[]>}
+ */
+async function collectWigmoreEventLinks() {
+  try {
+    return await collectWigmoreEventLinksWithBrowser();
+  } catch (err) {
+    console.warn(`Browser-based listing discovery failed (${err.message}); falling back to static HTML fetching.`);
+    return collectWigmoreEventLinksStatic();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -322,7 +416,8 @@ module.exports = {
   containsBrahms,
   isWithinNextMonth,
   getNextMonthDateRange,
-  extractWigmoreEvent
+  extractWigmoreEvent,
+  collectWigmoreEventLinksStatic,
 };
 
 if (require.main === module) {
