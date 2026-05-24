@@ -235,7 +235,7 @@ function textContainsTerm(normalisedText, term) {
     if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
   }
 
-  if (term.includes(" ") && !hasNumberingOrDigits(term)) {
+  if (isFlexibleMultiWordTerm(term)) {
     const tokenSet = new Set(splitTerms(normalisedText));
     const termTokens = splitTerms(term);
     return termTokens.every((token) => tokenSet.has(token));
@@ -250,6 +250,10 @@ function isNumberingTerm(term) {
 
 function hasNumberingOrDigits(term) {
   return /\bno\b/.test(term) || /\d/.test(term);
+}
+
+function isFlexibleMultiWordTerm(term) {
+  return term.includes(" ") && !hasNumberingOrDigits(term);
 }
 
 function findFirstTermPosition(normalisedText, terms) {

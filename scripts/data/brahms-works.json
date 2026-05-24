@@ -136,8 +136,8 @@
       "String Quintet in F, Op. 88",
       "String Quintet in F Op. 88"
     ],
-    "required_terms": ["string", "quintet"],
-    "optional_terms": ["no 1", "f major", "op 88"]
+    "required_terms": ["string", "quintet", "no 1"],
+    "optional_terms": ["f major", "op 88"]
   },
   {
     "id": "cello-sonata-no-2-op-99",
