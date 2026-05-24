@@ -235,7 +235,7 @@ function textContainsTerm(normalisedText, term) {
     if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
   }
 
-  if (term.includes(" ") && !/\bno\b|\d/.test(term)) {
+  if (term.includes(" ") && !hasNumberingOrDigits(term)) {
     const normalisedTokens = splitTerms(normalisedText);
     const termTokens = splitTerms(term);
     return termTokens.every((token) => normalisedTokens.includes(token));
@@ -246,6 +246,10 @@ function textContainsTerm(normalisedText, term) {
 
 function isNumberingTerm(term) {
   return /\bno\b/.test(term) && /\d/.test(term);
+}
+
+function hasNumberingOrDigits(term) {
+  return /\bno\b/.test(term) || /\d/.test(term);
 }
 
 function findFirstTermPosition(normalisedText, terms) {
@@ -384,6 +388,8 @@ function extractBrahmsWorksFromWigmoreRepertoire($) {
   const titles = [];
 
   $(".repertoire-work-item").each((_, item) => {
+    // Wigmore currently uses Tailwind utility classes in this left-column block.
+    // Keep the generic artist-link selector first, then class-based fallback.
     const composerText = normaliseWhitespace(
       $(item).find("a[href^='/artists/']").first().text() || $(item).find(".w-4\\/12, .sm\\:w-4\\/12").first().text()
     );
