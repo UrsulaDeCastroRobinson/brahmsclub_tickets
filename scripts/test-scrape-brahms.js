@@ -171,8 +171,8 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
   assert(
-    "structured programme text is preferred before catalog fallback",
-    event && event.programme === "sonata for violin and piano no 3 in d minor op 108"
+    "structured programme text is normalised to canonical title when confidently matched",
+    event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
   );
 }
 
@@ -202,7 +202,7 @@ console.log("\nextractWigmoreEvent");
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202610061930");
   assert(
     "multiple structured Brahms entries are joined with separators",
-    event && event.programme === "Clarinet Trio in A minor Op. 114 / Clarinet Quintet in B minor, Op. 115"
+    event && event.programme === "Clarinet Trio in A minor, Op. 114 / Clarinet Quintet in B minor, Op. 115"
   );
 }
 

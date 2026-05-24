@@ -99,7 +99,9 @@ function extractSection($, headingText) {
     if ($(el).text().trim().toLowerCase() !== normalised) return;
 
     // Collect following sibling text until the next heading of same/higher level
-    const tagLevel = parseInt(el.tagName[1], 10);
+    const headingTag = String(el.tagName || "").toLowerCase();
+    const tagLevel = parseInt(headingTag[1], 10);
+    if (Number.isNaN(tagLevel)) return;
     let sibling = $(el).next();
     const parts = [];
 
@@ -126,7 +128,9 @@ function extractStructuredProgrammeItems($) {
   $("h2, h3, h4, h5").each((_, el) => {
     if ($(el).text().trim().toLowerCase() !== "programme") return;
 
-    const tagLevel = parseInt(el.tagName[1], 10);
+    const headingTag = String(el.tagName || "").toLowerCase();
+    const tagLevel = parseInt(headingTag[1], 10);
+    if (Number.isNaN(tagLevel)) return;
     let sibling = $(el).next();
 
     while (sibling.length) {
@@ -135,7 +139,7 @@ function extractStructuredProgrammeItems($) {
 
       if (sibTag === "table") {
         sibling.find("tr").each((_, row) => {
-          const cells = $(row).find("th, td").map((__, cell) => normaliseWhitespace($(cell).text())).get().filter(Boolean);
+          const cells = $(row).find("th, td").map((_, cell) => normaliseWhitespace($(cell).text())).get().filter(Boolean);
           if (cells.length > 0) items.push(cells);
         });
       } else if (sibTag === "ul" || sibTag === "ol") {
@@ -191,7 +195,9 @@ function parseWigmoreDate(dateText, url) {
 }
 
 function containsBrahms(text) {
-  const value = String(text || "").replace(/([a-z])([A-Z])/g, "$1 $2");
+  // Some extraction paths can collapse adjacent tokens (e.g. "BrahmsViolin"),
+  // so split lowercase-uppercase boundaries before word-boundary matching.
+  const value = (text || "").replace(/([a-z])([A-Z])/g, "$1 $2");
   return /\bbrahms\b/i.test(value);
 }
 
@@ -306,9 +312,9 @@ function extractBrahmsWorksFromStructuredProgramme(items) {
     if (parts.length === 0 || !parts.some((part) => containsBrahms(part))) return;
 
     const candidates = [];
-    const nonComposerParts = parts.filter((part) => !containsBrahms(part));
-    candidates.push(...nonComposerParts);
-    parts.forEach((part) => {
+    const nonBrahmsParts = parts.filter((part) => !containsBrahms(part));
+    candidates.push(...nonBrahmsParts);
+    parts.filter((part) => containsBrahms(part)).forEach((part) => {
       const inlineTitle = extractInlineBrahmsTitle(part);
       if (inlineTitle) candidates.push(inlineTitle);
     });
@@ -317,7 +323,14 @@ function extractBrahmsWorksFromStructuredProgramme(items) {
       .map(cleanStructuredWorkTitle)
       .filter(Boolean)
       .filter((title) => !containsBrahms(title))
-      .forEach((title) => titles.push(title));
+      .forEach((title) => {
+        const matchedTitles = findBrahmsProgrammeMatches(title);
+        if (matchedTitles.length === 1) {
+          titles.push(matchedTitles[0]);
+        } else {
+          titles.push(title);
+        }
+      });
   });
 
   const deduped = new Map();
