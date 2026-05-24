@@ -11,6 +11,7 @@ const {
   extractSection,
   parseEventDateFromUrl,
   containsBrahms,
+  extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
 } = require("./scrape-brahms");
 
@@ -112,6 +113,46 @@ console.log("\ncontainsBrahms");
   assert("matches brahms (lowercase)", containsBrahms("featuring brahms"));
   assert("matches BRAHMS (uppercase)", containsBrahms("BRAHMS Piano Quartet"));
   assert("does not match partial word", !containsBrahms("Abrahmson conducts"));
+}
+
+console.log("\nextractWigmoreEvent");
+
+{
+  const html = `<html><body>
+    <h1>Morning recital</h1>
+    <h3>Programme</h3>
+    <p>Schubert: Sonata in A major, D. 664</p>
+    <p>Brahms: Violin Sonata No. 1 in G major, Op. 78</p>
+    <p>Schumann: Violin Sonata No. 2 in D minor, Op. 121</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606241300");
+  assert("extracts only Brahms programme entry", event && event.programme === "Brahms: Violin Sonata No. 1 in G major, Op. 78");
+}
+
+{
+  const html = `<html><body>
+    <h1>Piano recital</h1>
+    <h3>Programme</h3>
+    <p>Brahms: Intermezzi, Op. 117</p>
+    <p>Brahms: Four Serious Songs, Op. 121</p>
+    <p>Schubert: Impromptus, D. 899</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606131930");
+  assert(
+    "joins multiple Brahms programme entries concisely",
+    event && event.programme === "Brahms: Intermezzi, Op. 117 / Brahms: Four Serious Songs, Op. 121"
+  );
+}
+
+{
+  const html = `<html><head>
+    <meta name="description" content="A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114.">
+  </head><body><h1>Chamber recital</h1></body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
+  assert(
+    "falls back to concise Brahms-only meta description extraction",
+    event && event.programme === "Brahms: Clarinet Trio in A minor, Op. 114"
+  );
 }
 
 // ---------------------------------------------------------------------------
