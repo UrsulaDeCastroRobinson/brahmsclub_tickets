@@ -99,7 +99,9 @@ function extractSection($, headingText) {
     if ($(el).text().trim().toLowerCase() !== normalised) return;
 
     // Collect following sibling text until the next heading of same/higher level
-    const tagLevel = parseInt(el.tagName[1], 10);
+    const headingTag = String(el.tagName || "").toLowerCase();
+    const tagLevel = parseInt(headingTag[1], 10);
+    if (Number.isNaN(tagLevel)) return;
     let sibling = $(el).next();
     const parts = [];
 
@@ -118,6 +120,45 @@ function extractSection($, headingText) {
   });
 
   return result;
+}
+
+function extractStructuredProgrammeItems($) {
+  const items = [];
+
+  $("h2, h3, h4, h5").each((_, el) => {
+    if ($(el).text().trim().toLowerCase() !== "programme") return;
+
+    const headingTag = String(el.tagName || "").toLowerCase();
+    const tagLevel = parseInt(headingTag[1], 10);
+    if (Number.isNaN(tagLevel)) return;
+    let sibling = $(el).next();
+
+    while (sibling.length) {
+      const sibTag = (sibling.prop("tagName") || "").toLowerCase();
+      if (/^h[1-5]$/.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
+
+      if (sibTag === "table") {
+        sibling.find("tr").each((_, row) => {
+          const cells = $(row).find("th, td").map((_, cell) => normaliseWhitespace($(cell).text())).get().filter(Boolean);
+          if (cells.length > 0) items.push(cells);
+        });
+      } else if (sibTag === "ul" || sibTag === "ol") {
+        sibling.find("li").each((_, item) => {
+          const text = normaliseWhitespace($(item).text());
+          if (text) items.push([text]);
+        });
+      } else {
+        const text = normaliseWhitespace(sibling.text());
+        if (text) items.push([text]);
+      }
+
+      sibling = sibling.next();
+    }
+
+    return false;
+  });
+
+  return items;
 }
 
 /**
@@ -154,7 +195,10 @@ function parseWigmoreDate(dateText, url) {
 }
 
 function containsBrahms(text) {
-  return /\bbrahms\b/i.test(text);
+  // Some extraction paths can collapse adjacent tokens (e.g. "BrahmsViolin"),
+  // so split lowercase-uppercase boundaries before word-boundary matching.
+  const value = (text || "").replace(/([a-z])([A-Z])/g, "$1 $2");
+  return /\bbrahms\b/i.test(value);
 }
 
 function normaliseWhitespace(value) {
@@ -246,10 +290,77 @@ function findBrahmsProgrammeMatches(text) {
   return [...deduped.values()];
 }
 
-function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, artists, bodyText }) {
+function extractInlineBrahmsTitle(text) {
+  const match = normaliseWhitespace(text).match(/\bbrahms\b\s*[:\-–—]\s*(.+)$/i);
+  return match ? normaliseWhitespace(match[1]) : "";
+}
+
+function cleanStructuredWorkTitle(text) {
+  return normaliseWhitespace(
+    text
+      .replace(/^johannes\s+brahms\b\s*[:\-–—]?\s*/i, "")
+      .replace(/^brahms\b\s*[:\-–—]?\s*/i, "")
+      .replace(/^[\s:–—-]+/, "")
+  );
+}
+
+function extractBrahmsWorksFromStructuredProgramme(items) {
+  const titles = [];
+
+  items.forEach((item) => {
+    const parts = item.map((value) => normaliseWhitespace(value)).filter(Boolean);
+    if (parts.length === 0 || !parts.some((part) => containsBrahms(part))) return;
+
+    const candidates = [];
+    const nonBrahmsParts = parts.filter((part) => !containsBrahms(part));
+    candidates.push(...nonBrahmsParts);
+    parts.filter((part) => containsBrahms(part)).forEach((part) => {
+      const inlineTitle = extractInlineBrahmsTitle(part);
+      if (inlineTitle) candidates.push(inlineTitle);
+    });
+
+    candidates
+      .map(cleanStructuredWorkTitle)
+      .filter(Boolean)
+      .filter((title) => !containsBrahms(title))
+      .forEach((title) => {
+        const matchedTitles = findBrahmsProgrammeMatches(title);
+        if (matchedTitles.length === 1) {
+          titles.push(matchedTitles[0]);
+        } else {
+          titles.push(title);
+        }
+      });
+  });
+
+  const deduped = new Map();
+  titles.forEach((title) => {
+    const key = normaliseForMatch(title);
+    if (key && !deduped.has(key)) {
+      deduped.set(key, title);
+    }
+  });
+
+  return [...deduped.values()];
+}
+
+function resolveWigmoreProgramme({
+  programme,
+  overview,
+  metaDescription,
+  ogDescription,
+  artists,
+  bodyText,
+  structuredProgrammeItems
+}) {
   const fallback = normaliseWhitespace(
     programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
+
+  const structuredMatches = extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems || []);
+  if (structuredMatches.length > 0) {
+    return structuredMatches.join(" / ");
+  }
 
   const candidateText = [programme, overview, metaDescription, ogDescription, artists, bodyText]
     .filter(Boolean)
@@ -278,6 +389,7 @@ function extractWigmoreEvent(html, url) {
   const metaDescription = extractMetaContent($, "name", "description");
   const ogDescription = extractMetaContent($, "property", "og:description");
   const programme = extractSection($, "Programme");
+  const structuredProgrammeItems = extractStructuredProgrammeItems($);
   const overview = extractSection($, "Overview");
   const artists = extractSection($, "Artists");
 
@@ -305,6 +417,7 @@ function extractWigmoreEvent(html, url) {
     ogDescription,
     artists,
     bodyText,
+    structuredProgrammeItems,
   });
 
   return {

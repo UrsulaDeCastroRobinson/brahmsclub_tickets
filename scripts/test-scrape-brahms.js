@@ -121,14 +121,34 @@ console.log("\nextractWigmoreEvent");
   const html = `<html><body>
     <h1>Morning recital</h1>
     <h3>Programme</h3>
-    <p>Schubert: Sonata in A major, D. 664</p>
-    <p>Brahms: Violin Sonata No. 1 in G major, Op. 78</p>
-    <p>Schumann: Violin Sonata No. 2 in D minor, Op. 121</p>
+    <table>
+      <tr><th>Composer</th><th>Work</th></tr>
+      <tr><td>Schubert</td><td>Sonata in A major, D. 664</td></tr>
+      <tr><td>Johannes Brahms</td><td>Violin Sonata No. 1 in G major, Op. 78</td></tr>
+      <tr><td>Schumann</td><td>Violin Sonata No. 2 in D minor, Op. 121</td></tr>
+    </table>
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606241300");
   assert(
-    "mixed-composer programme resolves to canonical Brahms work",
+    "structured mixed-composer programme returns only Brahms work",
     event && event.programme === "Violin Sonata No. 1 in G major, Op. 78"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Chamber recital</h1>
+    <h3>Programme</h3>
+    <table>
+      <tr><th>Composer</th><th>Work</th></tr>
+      <tr><td>Johannes Brahms</td><td>String Quintet in F, Op. 88</td></tr>
+      <tr><td>Dvořák</td><td>String Quintet in E-flat major, Op. 97</td></tr>
+    </table>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606031930");
+  assert(
+    "structured programme table extracts June-3-style String Quintet entry",
+    event && event.programme === "String Quintet in F, Op. 88"
   );
 }
 
@@ -138,7 +158,7 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "overview/meta fallback supports opus-based matching",
+    "falls back to catalog matching when structured programme is absent",
     event && event.programme === "Clarinet Trio in A minor, Op. 114"
   );
 }
@@ -151,7 +171,7 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
   assert(
-    "opus-based matching resolves canonical title",
+    "structured programme text is normalised to canonical title when confidently matched",
     event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
   );
 }
@@ -181,7 +201,7 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202610061930");
   assert(
-    "multiple Brahms works are joined with separators",
+    "multiple structured Brahms entries are joined with separators",
     event && event.programme === "Clarinet Trio in A minor, Op. 114 / Clarinet Quintet in B minor, Op. 115"
   );
 }
@@ -196,7 +216,7 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202609011930");
   assert(
-    "no-match behaviour falls back to broad text sources",
+    "falls back to broad text when structured and catalog matching fail",
     event && event.programme === "An introduction to Johannes Brahms and his legacy."
   );
 }
