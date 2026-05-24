@@ -114,7 +114,7 @@ function extractMetaContent(html, attribute, value) {
       continue;
     }
 
-    const contentMatch = tag.match(/\bcontent\s*=\s*(["'])([\s\S]*?)\1/i);
+    const contentMatch = tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i);
     if (contentMatch) {
       return decodeEntities(contentMatch[2]).trim();
     }
@@ -133,14 +133,6 @@ function isWithinNextMonth(dateString) {
   if (Number.isNaN(parsed.getTime())) return false;
   const { start, end } = getNextMonthDateRange();
   return parsed >= start && parsed <= end;
-}
-
-function isAfterNextMonth(dateString) {
-  if (!dateString) return false;
-  const parsed = new Date(`${dateString}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return false;
-  const { end } = getNextMonthDateRange();
-  return parsed > end;
 }
 
 function containsBrahms(text) {
@@ -190,9 +182,8 @@ async function fetchHtml(url) {
 
 async function collectWigmoreEventLinks() {
   const eventLinkSet = new Set();
-  let stalePages = 0;
 
-  for (let page = 0; page < 15; page += 1) {
+  for (let page = 0; page <= 20; page += 1) {
     const listingUrl = page === 0
       ? "https://www.wigmore-hall.org.uk/whats-on"
       : `https://www.wigmore-hall.org.uk/whats-on?page=${page}`;
@@ -200,34 +191,15 @@ async function collectWigmoreEventLinks() {
     try {
       const listingHtml = await fetchHtml(listingUrl);
       const pageLinks = extractEventLinks(listingHtml);
-      const newLinks = pageLinks.filter((link) => !eventLinkSet.has(link));
-
       pageLinks.forEach((link) => eventLinkSet.add(link));
-
-      if (newLinks.length === 0) {
-        stalePages += 1;
-      } else {
-        stalePages = 0;
-      }
-
-      const linkDates = newLinks
-        .map(parseEventDateFromUrl)
-        .filter(Boolean)
-        .sort();
-
-      if (linkDates.length > 0 && linkDates.every(isAfterNextMonth)) {
-        break;
-      }
-
-      if (stalePages >= 2) {
-        break;
-      }
     } catch (error) {
       console.error(`Failed to fetch Wigmore Hall listing ${listingUrl}:`, error.message);
     }
   }
 
-  return [...eventLinkSet].sort();
+  return [...eventLinkSet]
+    .filter((url) => isWithinNextMonth(parseEventDateFromUrl(url)))
+    .sort();
 }
 
 async function scrapeWigmoreHall(source) {
@@ -236,11 +208,6 @@ async function scrapeWigmoreHall(source) {
 
   for (const eventUrl of eventLinks) {
     try {
-      const eventDate = parseEventDateFromUrl(eventUrl);
-      if (eventDate && isAfterNextMonth(eventDate)) {
-        break;
-      }
-
       const eventHtml = await fetchHtml(eventUrl);
       const event = extractWigmoreEvent(eventHtml, eventUrl);
 
