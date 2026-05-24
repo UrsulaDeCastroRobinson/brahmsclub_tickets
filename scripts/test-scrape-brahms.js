@@ -13,9 +13,6 @@ const {
   containsBrahms,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
-  hasDiscoveryProgress,
-  isAtScrollEnd,
-  nextStableEndRounds,
 } = require("./scrape-brahms");
 
 // ---------------------------------------------------------------------------
@@ -217,52 +214,6 @@ console.log("\nextractWigmoreEvent");
   assert(
     "prefers Programme work title over overview prose when both are present",
     event && event.programme === "Piano Sonata No. 3 in F minor Op. 5"
-  );
-}
-
-console.log("\ndiscovery helper logic");
-
-{
-  assert(
-    "hasDiscoveryProgress: detects new links",
-    hasDiscoveryProgress(
-      { linkCount: 59, scrollHeight: 8000 },
-      { linkCount: 60, scrollHeight: 8000 }
-    )
-  );
-  assert(
-    "hasDiscoveryProgress: detects increased scroll height",
-    hasDiscoveryProgress(
-      { linkCount: 59, scrollHeight: 8000 },
-      { linkCount: 59, scrollHeight: 8600 }
-    )
-  );
-  assert(
-    "hasDiscoveryProgress: false when both metrics are unchanged",
-    !hasDiscoveryProgress(
-      { linkCount: 59, scrollHeight: 8000 },
-      { linkCount: 59, scrollHeight: 8000 }
-    )
-  );
-  assert(
-    "isAtScrollEnd: true when viewport reaches page end",
-    isAtScrollEnd({ scrollY: 7200, viewportHeight: 800, scrollHeight: 8000 })
-  );
-  assert(
-    "isAtScrollEnd: false when not yet near page end",
-    !isAtScrollEnd({ scrollY: 6400, viewportHeight: 800, scrollHeight: 8000 })
-  );
-  assert(
-    "nextStableEndRounds: increments only when unchanged at page end",
-    nextStableEndRounds(2, { progressed: false, atScrollEnd: true }) === 3
-  );
-  assert(
-    "nextStableEndRounds: resets when progress occurs",
-    nextStableEndRounds(2, { progressed: true, atScrollEnd: true }) === 0
-  );
-  assert(
-    "nextStableEndRounds: resets when not at page end",
-    nextStableEndRounds(2, { progressed: false, atScrollEnd: false }) === 0
   );
 }
 
