@@ -160,6 +160,93 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function dedupeCaseInsensitive(values) {
+  const seen = new Set();
+  const result = [];
+  for (const value of values) {
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(value);
+  }
+  return result;
+}
+
+function cleanBrahmsWork(value) {
+  return normaliseWhitespace(value)
+    .replace(/^[-:–—\s]+/, "")
+    .replace(
+      /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i,
+      ""
+    )
+    .replace(/[.,;:!?]+$/, "")
+    .trim();
+}
+
+function cleanBrahmsEntry(value) {
+  let entry = normaliseWhitespace(value);
+  const idx = entry.toLowerCase().indexOf("brahms");
+  if (idx < 0) return "";
+  if (idx > 0) entry = entry.slice(idx);
+
+  entry = entry
+    .replace(
+      /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i,
+      ""
+    )
+    .replace(/[.,;:!?]+$/, "")
+    .trim();
+
+  if (!entry || !/^brahms\b/i.test(entry)) return "";
+
+  if (/^brahms\s*:/i.test(entry)) {
+    const work = cleanBrahmsWork(entry.replace(/^brahms\s*:/i, ""));
+    return work ? `Brahms: ${work}` : "";
+  }
+
+  return entry.replace(/^brahms\b/i, "Brahms");
+}
+
+function extractBrahmsEntriesFromText(text) {
+  const value = normaliseWhitespace(text || "");
+  if (!value || !containsBrahms(value)) return [];
+
+  const entries = [];
+  const composerTaggedRegex =
+    /\bbrahms\b\s*:\s*([\s\S]*?)(?=(?:\b[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*)?\s*:)|[|•;]|$)/gi;
+  let match;
+
+  while ((match = composerTaggedRegex.exec(value)) !== null) {
+    const work = cleanBrahmsWork(match[1]);
+    if (work) entries.push(`Brahms: ${work}`);
+  }
+
+  if (entries.length > 0) {
+    return dedupeCaseInsensitive(entries);
+  }
+
+  const chunks = value.split(/\s*(?:\||•|·|;)\s*/).filter(Boolean);
+  for (const chunk of chunks) {
+    if (!containsBrahms(chunk)) continue;
+    const cleaned = cleanBrahmsEntry(chunk);
+    if (cleaned) entries.push(cleaned);
+  }
+
+  return dedupeCaseInsensitive(entries);
+}
+
+function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, bodyText }) {
+  const sources = [programme, overview, metaDescription, ogDescription, bodyText];
+  for (const source of sources) {
+    const entries = extractBrahmsEntriesFromText(source);
+    if (entries.length > 0) {
+      return entries.join(" / ");
+    }
+  }
+
+  return "Brahms programme";
+}
+
 // ---------------------------------------------------------------------------
 // Wigmore Hall event page extraction
 // ---------------------------------------------------------------------------
@@ -195,9 +282,13 @@ function extractWigmoreEvent(html, url) {
   }
 
   const resolvedTitle = title || "Wigmore Hall event";
-  const resolvedProgramme = normaliseWhitespace(
-    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
-  );
+  const resolvedProgramme = resolveWigmoreProgramme({
+    programme,
+    overview,
+    metaDescription,
+    ogDescription,
+    bodyText: bodyText || artists,
+  });
 
   return {
     title: resolvedTitle,
