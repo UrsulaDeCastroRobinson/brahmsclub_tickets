@@ -90,8 +90,11 @@ function extractWigmoreEvent(html, url) {
 
   const combinedText = `${title} ${programme} ${overview}`.toLowerCase();
   if (!combinedText.includes("brahms")) {
+    console.log(`[wigmore] skip no brahms: ${url}`);
     return null;
   }
+
+  console.log(`[wigmore] brahms match: ${title || "(untitled)"} | ${date || "(no-date)"}`);
 
   return {
     title: title || "Wigmore Hall event",
@@ -130,11 +133,14 @@ async function scrapeWigmoreHall(source) {
 
   for (const listingUrl of listingUrls) {
     try {
+      console.log(`[wigmore] fetching listing: ${listingUrl}`);
       listingHtml = await fetchHtml(listingUrl);
       if (listingHtml) {
+        console.log(`[wigmore] fetched listing (${listingHtml.length} chars)`);
         break;
       }
     } catch (error) {
+      console.log(`[wigmore] listing fetch failed: ${listingUrl} -> ${error.message}`);
       lastError = error;
     }
   }
@@ -144,21 +150,39 @@ async function scrapeWigmoreHall(source) {
   }
 
   const eventLinks = extractEventLinks(listingHtml);
+  console.log(`[wigmore] found ${eventLinks.length} candidate event links`);
+  console.log(`[wigmore] sample links: ${eventLinks.slice(0, 5).join(", ") || "(none)"}`);
+
   const items = [];
 
   for (const eventUrl of eventLinks.slice(0, 60)) {
     try {
+      console.log(`[wigmore] fetching event: ${eventUrl}`);
       const eventHtml = await fetchHtml(eventUrl);
       const event = extractWigmoreEvent(eventHtml, eventUrl);
 
-      if (event && isWithinNextMonth(event.date)) {
-        items.push(event);
+      if (!event) {
+        continue;
       }
+
+      if (!event.date) {
+        console.log(`[wigmore] skip no parsed date: ${eventUrl}`);
+        continue;
+      }
+
+      if (!isWithinNextMonth(event.date)) {
+        console.log(`[wigmore] skip outside next month: ${event.title} | ${event.date}`);
+        continue;
+      }
+
+      console.log(`[wigmore] keep event: ${event.title} | ${event.date}`);
+      items.push(event);
     } catch (error) {
       console.error(`Failed to fetch Wigmore Hall event ${eventUrl}:`, error.message);
     }
   }
 
+  console.log(`[wigmore] kept ${items.length} events after filtering`);
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
 
