@@ -162,11 +162,8 @@ function normaliseWhitespace(value) {
 
 const BRAHMS_DESCRIPTIVE_SUFFIX_REGEX =
   /\s+(?:performed by|with|featuring|alongside|plus|including|and works by|including works by)\b[\s\S]*$/i;
-const COMPOSER_NAME_PATTERN = "[A-Z][A-Za-z'’.-]*(?:\\s+[A-Z][A-Za-z'’.-]*)?";
-const BRAHMS_COMPOSER_TAGGED_REGEX = new RegExp(
-  `\\bbrahms\\b\\s*:\\s*([\\s\\S]*?)(?=(?:\\b${COMPOSER_NAME_PATTERN}\\s*:)|[|•;]|$)`,
-  "gi"
-);
+const COMPOSER_NAME_PATTERN = "[\\p{Lu}][\\p{L}'’.-]*(?:\\s+[\\p{Lu}][\\p{L}'’.-]*)?";
+const PROGRAMME_SPLIT_REGEX = /\s*(?:[|•·;])\s*/;
 
 function dedupeCaseInsensitive(values) {
   const seen = new Set();
@@ -214,10 +211,13 @@ function extractBrahmsEntriesFromText(text) {
   if (!value || !containsBrahms(value)) return [];
 
   const entries = [];
-  BRAHMS_COMPOSER_TAGGED_REGEX.lastIndex = 0;
+  const composerTaggedRegex = new RegExp(
+    `\\bbrahms\\b\\s*:\\s*([\\s\\S]*?)(?=(?:\\b${COMPOSER_NAME_PATTERN}\\s*:)|[|•·;]|$)`,
+    "giu"
+  );
   let match;
 
-  while ((match = BRAHMS_COMPOSER_TAGGED_REGEX.exec(value)) !== null) {
+  while ((match = composerTaggedRegex.exec(value)) !== null) {
     const work = cleanBrahmsWork(match[1]);
     if (work) entries.push(`Brahms: ${work}`);
   }
@@ -226,7 +226,7 @@ function extractBrahmsEntriesFromText(text) {
     return dedupeCaseInsensitive(entries);
   }
 
-  const chunks = value.split(/\s*(?:\||•|·|;)\s*/).filter(Boolean);
+  const chunks = value.split(PROGRAMME_SPLIT_REGEX).filter(Boolean);
   for (const chunk of chunks) {
     if (!containsBrahms(chunk)) continue;
     const cleaned = cleanBrahmsEntry(chunk);
