@@ -4,6 +4,7 @@ const cheerio = require("cheerio");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
+const brahmsWorksPath = path.join(__dirname, "data", "brahms-works.json");
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -160,10 +161,106 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, artists, bodyText }) {
+function normaliseForMatch(value) {
   return normaliseWhitespace(
+    value
+      .toLowerCase()
+      .replace(/[’']/g, "")
+      .replace(/opus/g, "op")
+      .replace(/op\./g, "op")
+      .replace(/no\./g, "no")
+      .replace(/[–—-]/g, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+  );
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function textContainsTerm(normalisedText, term) {
+  if (!term) return false;
+  return new RegExp(`\\b${escapeRegex(term)}\\b`).test(normalisedText);
+}
+
+function getBrahmsWorksLibrary() {
+  try {
+    return JSON.parse(fs.readFileSync(brahmsWorksPath, "utf8"));
+  } catch (_) {
+    return [];
+  }
+}
+
+const brahmsWorksLibrary = getBrahmsWorksLibrary();
+
+function findBrahmsProgrammeMatches(text) {
+  const normalisedText = normaliseForMatch(text);
+  if (!normalisedText) return [];
+
+  const matches = [];
+
+  for (const work of brahmsWorksLibrary) {
+    const aliases = (work.aliases || []).map(normaliseForMatch).filter(Boolean);
+    const requiredTerms = (work.required_terms || []).map(normaliseForMatch).filter(Boolean);
+    const optionalTerms = (work.optional_terms || []).map(normaliseForMatch).filter(Boolean);
+    const opusTerm = work.opus ? normaliseForMatch(`op ${work.opus}`) : "";
+
+    const aliasIndexes = aliases
+      .map((alias) => normalisedText.indexOf(alias))
+      .filter((index) => index >= 0);
+    const hasAliasMatch = aliasIndexes.length > 0;
+    const requiredTermsMatched = requiredTerms.every((term) => textContainsTerm(normalisedText, term));
+    const optionalMatches = optionalTerms.filter((term) => textContainsTerm(normalisedText, term)).length;
+    const hasOpusMatch = opusTerm ? textContainsTerm(normalisedText, opusTerm) : false;
+
+    const isConfidentMatch =
+      (hasAliasMatch && (requiredTerms.length === 0 || requiredTermsMatched))
+      || (requiredTermsMatched && hasOpusMatch)
+      || (requiredTermsMatched && optionalMatches >= 2);
+
+    if (!isConfidentMatch) continue;
+
+    const position =
+      (hasAliasMatch ? Math.min(...aliasIndexes) : Infinity) !== Infinity
+        ? Math.min(...aliasIndexes)
+        : requiredTerms.reduce((minIndex, term) => {
+          const index = normalisedText.indexOf(term);
+          return index >= 0 ? Math.min(minIndex, index) : minIndex;
+        }, Infinity);
+
+    matches.push({
+      work,
+      position: Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER,
+    });
+  }
+
+  const deduped = new Map();
+  matches
+    .sort((a, b) => a.position - b.position)
+    .forEach(({ work }) => {
+      if (!deduped.has(work.id)) {
+        deduped.set(work.id, work.canonical_title);
+      }
+    });
+
+  return [...deduped.values()];
+}
+
+function resolveWigmoreProgramme({ programme, overview, metaDescription, ogDescription, artists, bodyText }) {
+  const fallback = normaliseWhitespace(
     programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
+
+  const candidateText = [programme, overview, metaDescription, ogDescription, artists, bodyText]
+    .filter(Boolean)
+    .join(" ");
+  const workMatches = findBrahmsProgrammeMatches(candidateText);
+
+  if (workMatches.length > 0) {
+    return workMatches.join(" / ");
+  }
+
+  return fallback;
 }
 
 // ---------------------------------------------------------------------------
