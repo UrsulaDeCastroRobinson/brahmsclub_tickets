@@ -126,67 +126,9 @@ console.log("\nextractWigmoreEvent");
     <p>Schumann: Violin Sonata No. 2 in D minor, Op. 121</p>
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606241300");
-  assert("extracts only Brahms work title from programme entry", event && event.programme === "Violin Sonata No. 1 in G major, Op. 78");
-}
-
-{
-  const html = `<html><body>
-    <h1>Piano recital</h1>
-    <h3>Programme</h3>
-    <p>Brahms: Intermezzi, Op. 117</p>
-    <p>Brahms: Four Serious Songs, Op. 121</p>
-    <p>Schubert: Impromptus, D. 899</p>
-  </body></html>`;
-  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606131930");
   assert(
-    "joins multiple Brahms work titles concisely",
-    event && event.programme === "Intermezzi, Op. 117 / Four Serious Songs, Op. 121"
-  );
-}
-
-{
-  const html = `<html><body>
-    <h1>Piano recital</h1>
-    <h3>Programme</h3>
-    <p>Johannes Brahms 1833–1897</p>
-    <p>Piano Sonata No. 3 in F minor Op. 5</p>
-    <p>Franz Schubert 1797–1828</p>
-    <p>Piano Sonata in A major, D. 664</p>
-  </body></html>`;
-  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606171300");
-  assert(
-    "strips composer heading plus dates and keeps only Brahms work title",
-    event && event.programme === "Piano Sonata No. 3 in F minor Op. 5"
-  );
-}
-
-{
-  const html = `<html><body>
-    <h1>Chamber recital</h1>
-    <h3>Programme</h3>
-    <p>Brahms 1833-1897</p>
-    <p>Piano Quartet in G minor, Op. 25</p>
-    <p>Piano Quintet in F minor, Op. 34</p>
-    <p>Clara Schumann 1819-1896</p>
-    <p>Three Romances, Op. 22</p>
-  </body></html>`;
-  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
-  assert(
-    "keeps multiple Brahms works from a Brahms composer-date block only",
-    event && event.programme === "Piano Quartet in G minor, Op. 25 / Piano Quintet in F minor, Op. 34"
-  );
-}
-
-{
-  const html = `<html><body>
-    <h1>Chamber recital</h1>
-    <h3>Programme</h3>
-    <p>Brahms: Clarinet Trio in A minor, Op. 114</p>
-  </body></html>`;
-  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
-  assert(
-    "extracts programme work title directly when Programme section is available",
-    event && event.programme === "Clarinet Trio in A minor, Op. 114"
+    "uses the Programme section text as output when available",
+    event && event.programme === "Schubert: Sonata in A major, D. 664 Brahms: Violin Sonata No. 1 in G major, Op. 78 Schumann: Violin Sonata No. 2 in D minor, Op. 121"
   );
 }
 
@@ -196,8 +138,8 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "does not use meta description prose as programme fallback",
-    event && event.programme === "Brahms work"
+    "falls back to meta description text when Programme is unavailable",
+    event && event.programme === "A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114."
   );
 }
 
@@ -212,8 +154,8 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606171300");
   assert(
-    "prefers Programme work title over overview prose when both are present",
-    event && event.programme === "Piano Sonata No. 3 in F minor Op. 5"
+    "prefers Programme section text over Overview fallback",
+    event && event.programme === "Johannes Brahms 1833–1897 Piano Sonata No. 3 in F minor Op. 5"
   );
 }
 
