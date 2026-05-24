@@ -148,7 +148,31 @@ console.log("\nextractWigmoreEvent");
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606031930");
   assert(
     "structured programme table extracts June-3-style String Quintet entry",
-    event && event.programme === "String Quintet in F, Op. 88"
+    event && event.programme === "String Quintet No. 1 in F major, Op. 88"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Chamber recital</h1>
+    <article class="repertoire-items repertoire-work-item">
+      <li class="my3 flex flex-wrap">
+        <div class="w-4/12">
+          <a href="/artists/johannes-brahms">Johannes Brahms</a>
+          <p>1833-1897</p>
+        </div>
+        <div class="w-full sm:w-8/12">
+          <div class="repertoire-list">
+            <div class="rich-text inline bold">String Quintet in F Op. 88</div>
+          </div>
+        </div>
+      </li>
+    </article>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606031930");
+  assert(
+    "wigmore repertoire DOM resolves compact Op. 88 title to canonical work",
+    event && event.programme === "String Quintet No. 1 in F major, Op. 88"
   );
 }
 
@@ -172,6 +196,45 @@ console.log("\nextractWigmoreEvent");
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
   assert(
     "structured programme text is normalised to canonical title when confidently matched",
+    event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Late-night chamber recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms: String Quintet in F Op 88</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606111930");
+  assert(
+    "structured programme tolerates missing No. 1 and mode words with opus",
+    event && event.programme === "String Quintet No. 1 in F major, Op. 88"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Evening recital</h1>
+    <h3>Programme</h3>
+    <p>Brahms - Sonata for violin and piano No 3, Op 108 in D minor</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606181930");
+  assert(
+    "structured programme tolerates punctuation and wording order differences",
+    event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Matinee recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms violin sonata no 3 in d op 108</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606121300");
+  assert(
+    "structured programme tolerates omitted minor with opus present",
     event && event.programme === "Violin Sonata No. 3 in D minor, Op. 108"
   );
 }

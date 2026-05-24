@@ -218,13 +218,45 @@ function normaliseForMatch(value) {
   );
 }
 
+function splitTerms(value) {
+  return value.split(" ").filter(Boolean);
+}
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function textContainsTerm(normalisedText, term) {
   if (!term) return false;
-  return new RegExp(`\\b${escapeRegex(term)}\\b`).test(normalisedText);
+  if (new RegExp(`\\b${escapeRegex(term)}\\b`).test(normalisedText)) return true;
+
+  const modeAgnosticTerm = normaliseWhitespace(term.replace(/\b(major|minor)\b/g, ""));
+  if (modeAgnosticTerm && modeAgnosticTerm !== term) {
+    if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
+  }
+
+  if (term.includes(" ") && !/\bno\b|\d/.test(term)) {
+    const normalisedTokens = splitTerms(normalisedText);
+    const termTokens = splitTerms(term);
+    return termTokens.every((token) => normalisedTokens.includes(token));
+  }
+
+  return false;
+}
+
+function isNumberingTerm(term) {
+  return /\bno\b/.test(term) && /\d/.test(term);
+}
+
+function findFirstTermPosition(normalisedText, terms) {
+  return terms.reduce((minIndex, term) => {
+    const tokens = splitTerms(term);
+    const indexes = tokens
+      .map((token) => normalisedText.indexOf(token))
+      .filter((index) => index >= 0);
+    if (indexes.length === 0) return minIndex;
+    return Math.min(minIndex, Math.min(...indexes));
+  }, Infinity);
 }
 
 function getBrahmsWorksLibrary() {
@@ -246,6 +278,7 @@ function findBrahmsProgrammeMatches(text) {
   for (const work of brahmsWorksLibrary) {
     const aliases = (work.aliases || []).map(normaliseForMatch).filter(Boolean);
     const requiredTerms = (work.required_terms || []).map(normaliseForMatch).filter(Boolean);
+    const coreRequiredTerms = requiredTerms.filter((term) => !isNumberingTerm(term));
     const optionalTerms = (work.optional_terms || []).map(normaliseForMatch).filter(Boolean);
     const opusTerm = work.opus ? normaliseForMatch(`op ${work.opus}`) : "";
 
@@ -254,12 +287,14 @@ function findBrahmsProgrammeMatches(text) {
       .filter((index) => index >= 0);
     const hasAliasMatch = aliasIndexes.length > 0;
     const requiredTermsMatched = requiredTerms.every((term) => textContainsTerm(normalisedText, term));
+    const coreRequiredTermsMatched = coreRequiredTerms.every((term) => textContainsTerm(normalisedText, term));
     const optionalMatches = optionalTerms.filter((term) => textContainsTerm(normalisedText, term)).length;
     const hasOpusMatch = opusTerm ? textContainsTerm(normalisedText, opusTerm) : false;
 
     const isConfidentMatch =
       (hasAliasMatch && (requiredTerms.length === 0 || requiredTermsMatched))
       || (requiredTermsMatched && hasOpusMatch)
+      || (coreRequiredTerms.length > 0 && coreRequiredTermsMatched && hasOpusMatch)
       || (requiredTermsMatched && optionalMatches >= 2);
 
     if (!isConfidentMatch) continue;
@@ -267,10 +302,7 @@ function findBrahmsProgrammeMatches(text) {
     const position =
       (hasAliasMatch ? Math.min(...aliasIndexes) : Infinity) !== Infinity
         ? Math.min(...aliasIndexes)
-        : requiredTerms.reduce((minIndex, term) => {
-          const index = normalisedText.indexOf(term);
-          return index >= 0 ? Math.min(minIndex, index) : minIndex;
-        }, Infinity);
+        : findFirstTermPosition(normalisedText, requiredTerms);
 
     matches.push({
       work,
@@ -288,6 +320,10 @@ function findBrahmsProgrammeMatches(text) {
     });
 
   return [...deduped.values()];
+}
+
+function normaliseWorkTitleOpComma(title) {
+  return title.replace(/([^,])\s+([Oo]p\.)/, "$1, $2");
 }
 
 function extractInlineBrahmsTitle(text) {
@@ -344,6 +380,39 @@ function extractBrahmsWorksFromStructuredProgramme(items) {
   return [...deduped.values()];
 }
 
+function extractBrahmsWorksFromWigmoreRepertoire($) {
+  const titles = [];
+
+  $(".repertoire-work-item").each((_, item) => {
+    const composerText = normaliseWhitespace(
+      $(item).find("a[href^='/artists/']").first().text() || $(item).find(".w-4\\/12, .sm\\:w-4\\/12").first().text()
+    );
+    if (!containsBrahms(composerText)) return;
+
+    $(item).find(".repertoire-list .rich-text.inline.bold").each((_, workEl) => {
+      const rawTitle = normaliseWhitespace($(workEl).text());
+      if (!rawTitle) return;
+
+      const matchedTitles = findBrahmsProgrammeMatches(rawTitle);
+      if (matchedTitles.length > 0) {
+        matchedTitles.forEach((title) => titles.push(title));
+      } else {
+        titles.push(normaliseWorkTitleOpComma(rawTitle));
+      }
+    });
+  });
+
+  const deduped = new Map();
+  titles.forEach((title) => {
+    const key = normaliseForMatch(title);
+    if (key && !deduped.has(key)) {
+      deduped.set(key, title);
+    }
+  });
+
+  return [...deduped.values()];
+}
+
 function resolveWigmoreProgramme({
   programme,
   overview,
@@ -351,11 +420,16 @@ function resolveWigmoreProgramme({
   ogDescription,
   artists,
   bodyText,
-  structuredProgrammeItems
+  structuredProgrammeItems,
+  wigmoreRepertoireWorks,
 }) {
   const fallback = normaliseWhitespace(
     programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
   );
+
+  if (wigmoreRepertoireWorks.length > 0) {
+    return wigmoreRepertoireWorks.join(" / ");
+  }
 
   const structuredMatches = extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems || []);
   if (structuredMatches.length > 0) {
@@ -389,6 +463,7 @@ function extractWigmoreEvent(html, url) {
   const metaDescription = extractMetaContent($, "name", "description");
   const ogDescription = extractMetaContent($, "property", "og:description");
   const programme = extractSection($, "Programme");
+  const wigmoreRepertoireWorks = extractBrahmsWorksFromWigmoreRepertoire($);
   const structuredProgrammeItems = extractStructuredProgrammeItems($);
   const overview = extractSection($, "Overview");
   const artists = extractSection($, "Artists");
@@ -418,6 +493,7 @@ function extractWigmoreEvent(html, url) {
     artists,
     bodyText,
     structuredProgrammeItems,
+    wigmoreRepertoireWorks,
   });
 
   return {
