@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const cheerio = require("cheerio");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
@@ -14,6 +15,10 @@ const browserHeaders = {
   "upgrade-insecure-requests": "1"
 };
 
+// ---------------------------------------------------------------------------
+// Date range helpers
+// ---------------------------------------------------------------------------
+
 function getNextMonthDateRange() {
   const now = new Date();
   const start = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
@@ -26,107 +31,6 @@ function getNextMonthLabel() {
   return start.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-function decodeEntities(value) {
-  return value
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">");
-}
-
-function stripTags(value) {
-  return decodeEntities(
-    value
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
-}
-
-function extractEventLinks(html) {
-  const links = new Set();
-  const regex = /href="(\/whats-on\/[^"]+)"/g;
-  let match;
-
-  while ((match = regex.exec(html)) !== null) {
-    const href = match[1];
-    if (/^\/whats-on\/\d{12}$/.test(href)) {
-      links.add(`https://www.wigmore-hall.org.uk${href}`);
-    }
-  }
-
-  return [...links];
-}
-
-function parseEventDateFromUrl(url) {
-  const urlMatch = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
-  if (!urlMatch) return "";
-  const [, year, month, day] = urlMatch;
-  return `${year}-${month}-${day}`;
-}
-
-function parseWigmoreDate(raw, url) {
-  const match = raw.match(/([A-Za-z]{3})\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
-  if (match) {
-    const [, , day, month, year] = match;
-    const parsed = new Date(`${day} ${month} ${year} 12:00:00 UTC`);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString().slice(0, 10);
-    }
-  }
-
-  return parseEventDateFromUrl(url);
-}
-
-function extractSection(html, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`#### ${escapedHeading}([\\s\\S]*?)(?:####|$)`, "i");
-  const match = html.match(regex);
-  return match ? stripTags(match[1]) : "";
-}
-
-function extractHeadingText(html) {
-  const match = html.match(/#\s+(.+)/);
-  return match ? stripTags(match[1]) : "";
-}
-
-function extractTitleTag(html) {
-  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return match ? stripTags(match[1]) : "";
-}
-
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractMetaContent(html, attribute, value) {
-  const escapedAttr = escapeRegex(attribute);
-  const escapedValue = escapeRegex(value);
-  const tagMatches = html.match(/<meta\b[^>]*>/gi) || [];
-
-  for (const tag of tagMatches) {
-    const attrPattern = new RegExp(`\\b${escapedAttr}\\s*=\\s*(["'])${escapedValue}\\1`, "i");
-    if (!attrPattern.test(tag)) {
-      continue;
-    }
-
-    const contentMatch = tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i);
-    if (contentMatch) {
-      return decodeEntities(contentMatch[2]).trim();
-    }
-  }
-
-  return "";
-}
-
-function normaliseWhitespace(value) {
-  return value.replace(/\s+/g, " ").trim();
-}
-
 function isWithinNextMonth(dateString) {
   if (!dateString) return false;
   const parsed = new Date(`${dateString}T12:00:00Z`);
@@ -135,23 +39,154 @@ function isWithinNextMonth(dateString) {
   return parsed >= start && parsed <= end;
 }
 
+// ---------------------------------------------------------------------------
+// Cheerio-based HTML parsing helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract all Wigmore Hall event links from a listing page.
+ * Uses Cheerio to find <a href="/whats-on/YYYYMMDDHHII"> links.
+ */
+function extractEventLinks(html) {
+  const $ = cheerio.load(html);
+  const links = new Set();
+
+  $("a[href]").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    if (/^\/whats-on\/\d{12}$/.test(href)) {
+      links.add(`https://www.wigmore-hall.org.uk${href}`);
+    }
+  });
+
+  return [...links];
+}
+
+/**
+ * Extract the event title from an event page.
+ * Tries the first <h1>, then the <title> tag (stripped of site suffix).
+ */
+function extractTitle(html) {
+  const $ = cheerio.load(html);
+
+  const h1 = $("h1").first().text().trim();
+  if (h1) return h1;
+
+  const titleTag = $("title").text().trim();
+  return titleTag.replace(/\s*[|\u2013\u2014-]\s*Wigmore Hall.*$/i, "").trim();
+}
+
+/**
+ * Extract a <meta> tag's content by attribute name and value.
+ * Uses .filter() with direct attribute comparison to avoid CSS selector injection.
+ * E.g. extractMetaContent($, "name", "description") or extractMetaContent($, "property", "og:description").
+ */
+function extractMetaContent($, attribute, value) {
+  const el = $("meta").filter((_, meta) => $(meta).attr(attribute) === value).first();
+  return (el.attr("content") || "").trim();
+}
+
+/**
+ * Extract the text content of a named section from an event page.
+ * Looks for headings (h2–h5) whose text matches `headingText`, then collects
+ * the text of all sibling/child elements until the next same-level heading.
+ */
+function extractSection($, headingText) {
+  const normalised = headingText.toLowerCase();
+  let result = "";
+
+  $("h2, h3, h4, h5").each((_, el) => {
+    if ($(el).text().trim().toLowerCase() !== normalised) return;
+
+    // Collect following sibling text until the next heading of same/higher level
+    const tagLevel = parseInt(el.tagName[1], 10);
+    let sibling = $(el).next();
+    const parts = [];
+
+    while (sibling.length) {
+      const sibTag = (sibling.prop("tagName") || "").toLowerCase();
+      if (/^h[1-5]$/.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
+      parts.push(sibling.text().trim());
+      sibling = sibling.next();
+    }
+
+    const text = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    if (text) {
+      result = text;
+      return false; // stop iterating once the first matching section is found
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Extract clean body text from an event page, stripping non-content elements.
+ */
+function extractBodyText($) {
+  $("script, style, nav, header, footer, noscript").remove();
+  return $("body").text().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Parse a YYYY-MM-DD date from the Wigmore event URL.
+ * URL format: /whats-on/YYYYMMDDHHII
+ */
+function parseEventDateFromUrl(url) {
+  const m = url.match(/\/whats-on\/(\d{4})(\d{2})(\d{2})\d{4}$/);
+  if (!m) return "";
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
+/**
+ * Parse a date from visible date text such as "Thursday 24 June 2026 1.00pm".
+ * Falls back to the URL-derived date.
+ */
+function parseWigmoreDate(dateText, url) {
+  const m = dateText.match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})/);
+  if (m) {
+    const parsed = new Date(`${m[1]} ${m[2]} ${m[3]} 12:00:00 UTC`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+  }
+  return parseEventDateFromUrl(url);
+}
+
 function containsBrahms(text) {
   return /\bbrahms\b/i.test(text);
 }
 
-function extractWigmoreEvent(html, url) {
-  const title = extractHeadingText(html);
-  const titleTag = extractTitleTag(html);
-  const metaDescription = extractMetaContent(html, "name", "description");
-  const ogDescription = extractMetaContent(html, "property", "og:description");
-  const dateSection = extractSection(html, "Date");
-  const programme = extractSection(html, "Programme");
-  const overview = extractSection(html, "Overview");
-  const artists = extractSection(html, "Artists");
-  const bodyText = stripTags(html);
-  const date = parseWigmoreDate(dateSection, url);
+function normaliseWhitespace(value) {
+  return value.replace(/\s+/g, " ").trim();
+}
 
-  const combinedText = [title, titleTag, metaDescription, ogDescription, programme, overview, artists, bodyText]
+// ---------------------------------------------------------------------------
+// Wigmore Hall event page extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a single Wigmore Hall event page and return a structured event object,
+ * or null if the page does not mention Brahms.
+ */
+function extractWigmoreEvent(html, url) {
+  const $ = cheerio.load(html);
+
+  const title = extractTitle(html);
+  const metaDescription = extractMetaContent($, "name", "description");
+  const ogDescription = extractMetaContent($, "property", "og:description");
+  const programme = extractSection($, "Programme");
+  const overview = extractSection($, "Overview");
+  const artists = extractSection($, "Artists");
+
+  // Date: look for a visible date element; fall back to URL
+  const dateEl = $("time").first().text().trim()
+    || $(".event-date, .date, [class*='date']").first().text().trim()
+    || "";
+  const date = parseWigmoreDate(dateEl, url);
+
+  const bodyText = extractBodyText($);
+
+  const combinedText = [title, metaDescription, ogDescription, programme, overview, artists, bodyText]
     .filter(Boolean)
     .join(" ");
 
@@ -159,8 +194,10 @@ function extractWigmoreEvent(html, url) {
     return null;
   }
 
-  const resolvedTitle = title || titleTag || "Wigmore Hall event";
-  const resolvedProgramme = normaliseWhitespace(programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme");
+  const resolvedTitle = title || "Wigmore Hall event";
+  const resolvedProgramme = normaliseWhitespace(
+    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
+  );
 
   return {
     title: resolvedTitle,
@@ -172,6 +209,10 @@ function extractWigmoreEvent(html, url) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Network helpers
+// ---------------------------------------------------------------------------
+
 async function fetchHtml(url) {
   const response = await fetch(url, { headers: browserHeaders });
   if (!response.ok) {
@@ -180,6 +221,16 @@ async function fetchHtml(url) {
   return response.text();
 }
 
+// ---------------------------------------------------------------------------
+// Listing discovery
+// ---------------------------------------------------------------------------
+
+/**
+ * Crawl Wigmore Hall listing pages 0–20, collect all event URLs, then filter
+ * to those whose URL-encoded date falls within the next calendar month.
+ * Scanning a fixed range avoids fragile early-termination heuristics that
+ * caused late-month events to be missed.
+ */
 async function collectWigmoreEventLinks() {
   const eventLinkSet = new Set();
 
@@ -202,8 +253,13 @@ async function collectWigmoreEventLinks() {
     .sort();
 }
 
-async function scrapeWigmoreHall(source) {
+// ---------------------------------------------------------------------------
+// Scraping orchestration
+// ---------------------------------------------------------------------------
+
+async function scrapeWigmoreHall() {
   const eventLinks = await collectWigmoreEventLinks();
+  console.log(`Discovered ${eventLinks.length} Wigmore Hall event(s) in target month`);
   const items = [];
 
   for (const eventUrl of eventLinks) {
@@ -224,7 +280,7 @@ async function scrapeWigmoreHall(source) {
 
 async function scrapeSource(source) {
   if (source.id === "wigmore-hall") {
-    return scrapeWigmoreHall(source);
+    return scrapeWigmoreHall();
   }
 
   return [];
@@ -254,7 +310,24 @@ async function main() {
   console.log(`Wrote ${items.length} items to ${outputPath}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// Export helpers for testing; only run main() when invoked directly.
+module.exports = {
+  extractEventLinks,
+  extractTitle,
+  extractMetaContent,
+  extractSection,
+  extractBodyText,
+  parseEventDateFromUrl,
+  parseWigmoreDate,
+  containsBrahms,
+  isWithinNextMonth,
+  getNextMonthDateRange,
+  extractWigmoreEvent
+};
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
