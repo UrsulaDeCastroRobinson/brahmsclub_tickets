@@ -125,37 +125,36 @@ async function fetchHtml(url) {
 async function scrapeWigmoreHall(source) {
   const listingUrls = [
     "https://www.wigmore-hall.org.uk/whats-on",
-    "https://www.wigmore-hall.org.uk/whats-on?page=1"
+    "https://www.wigmore-hall.org.uk/whats-on?page=1",
+    "https://www.wigmore-hall.org.uk/whats-on?page=2",
+    "https://www.wigmore-hall.org.uk/whats-on?page=3",
+    "https://www.wigmore-hall.org.uk/whats-on?page=4",
+    "https://www.wigmore-hall.org.uk/whats-on?page=5",
+    "https://www.wigmore-hall.org.uk/whats-on?page=6"
   ];
 
-  let listingHtml = "";
-  let lastError = null;
+  const eventLinkSet = new Set();
 
   for (const listingUrl of listingUrls) {
     try {
       console.log(`[wigmore] fetching listing: ${listingUrl}`);
-      listingHtml = await fetchHtml(listingUrl);
-      if (listingHtml) {
-        console.log(`[wigmore] fetched listing (${listingHtml.length} chars)`);
-        break;
-      }
+      const listingHtml = await fetchHtml(listingUrl);
+      console.log(`[wigmore] fetched listing (${listingHtml.length} chars)`);
+      const pageLinks = extractEventLinks(listingHtml);
+      console.log(`[wigmore] found ${pageLinks.length} candidate links on ${listingUrl}`);
+      pageLinks.forEach((link) => eventLinkSet.add(link));
     } catch (error) {
       console.log(`[wigmore] listing fetch failed: ${listingUrl} -> ${error.message}`);
-      lastError = error;
     }
   }
 
-  if (!listingHtml) {
-    throw lastError || new Error("Unable to fetch Wigmore Hall listings");
-  }
-
-  const eventLinks = extractEventLinks(listingHtml);
-  console.log(`[wigmore] found ${eventLinks.length} candidate event links`);
-  console.log(`[wigmore] sample links: ${eventLinks.slice(0, 5).join(", ") || "(none)"}`);
+  const eventLinks = [...eventLinkSet].sort();
+  console.log(`[wigmore] total unique event links: ${eventLinks.length}`);
+  console.log(`[wigmore] sample links: ${eventLinks.slice(0, 10).join(", ") || "(none)"}`);
 
   const items = [];
 
-  for (const eventUrl of eventLinks.slice(0, 60)) {
+  for (const eventUrl of eventLinks.slice(0, 200)) {
     try {
       console.log(`[wigmore] fetching event: ${eventUrl}`);
       const eventHtml = await fetchHtml(eventUrl);
