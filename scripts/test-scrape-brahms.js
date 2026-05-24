@@ -267,8 +267,8 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "falls back to catalog matching when structured programme is absent",
-    event && event.programme === "Clarinet Trio in A minor, Op. 114"
+    "meta description Brahms mention without Programme section is dropped",
+    event === null
   );
 }
 
@@ -326,6 +326,19 @@ console.log("\nextractWigmoreEvent");
 
 {
   const html = `<html><body>
+    <h1>Evening recital</h1>
+    <h3>Programme</h3>
+    <p>String Quintet in F Op. 88</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606191930");
+  assert(
+    "programme approximate work match without explicit Brahms mention still resolves canonical work",
+    event && event.programme === "String Quintet No. 1 in F major, Op. 88"
+  );
+}
+
+{
+  const html = `<html><body>
     <h1>Piano recital</h1>
     <h3>Programme</h3>
     <p>Johannes Brahms 1833–1897</p>
@@ -355,17 +368,61 @@ console.log("\nextractWigmoreEvent");
 }
 
 {
+  const html = `<html><body>
+    <h1>Composer portrait recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms (1833-1897)</p>
+    <p>Interval</p>
+    <p>Thursday 24 June 2026 7.30pm</p>
+    <h3>Overview</h3>
+    <p>A broader programme note appears here.</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606241930");
+  assert(
+    "programme Brahms reference with lifespan-only text is retained",
+    event !== null
+  );
+  assert(
+    "lifespan/date/interval fragments are not emitted as fallback programme text",
+    event
+      && event.programme !== "1833-1897"
+      && event.programme !== "Interval"
+      && !/24 June 2026/i.test(event.programme)
+  );
+}
+
+{
+  const html = `<html><body>
+    <h1>Late-night recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms: Two Songs, arr. for chamber ensemble</p>
+    <p>Interval</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606251930");
+  assert(
+    "programme Brahms mention without catalog work match keeps event",
+    event !== null
+  );
+  assert(
+    "fallback programme text uses Brahms-adjacent programme content",
+    event && event.programme === "Two Songs, arr. for chamber ensemble"
+  );
+}
+
+{
   const html = `<html><head>
     <meta property="og:description" content="Join us for Brahms with rising stars in an evening of chamber music.">
   </head><body>
     <h1>Brahms chamber evening</h1>
+    <h3>Programme</h3>
+    <p>Schumann: Adagio and Allegro, Op. 70</p>
     <h3>Overview</h3>
     <p>An introduction to Johannes Brahms and his legacy.</p>
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202609011930");
   assert(
-    "falls back to broad text when structured and catalog matching fail",
-    event && event.programme === "An introduction to Johannes Brahms and his legacy."
+    "overview/meta Brahms mention without Programme Brahms evidence is dropped",
+    event === null
   );
 }
 
