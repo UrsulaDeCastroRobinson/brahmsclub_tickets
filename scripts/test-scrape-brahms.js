@@ -191,6 +191,22 @@ console.log("\nextractWigmoreEvent");
   );
 }
 
+{
+  const html = `<html><body>
+    <h1>Piano recital</h1>
+    <h3>Programme</h3>
+    <p>Johannes Brahms 1833–1897</p>
+    <p>Piano Sonata No. 3 in F minor Op. 5</p>
+    <h3>Overview</h3>
+    <p>Ukrainian pianist Khrystyna Mykhailichenko performs Busoni’s piano transcription of the Chaconne.</p>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606171300");
+  assert(
+    "prefers Programme work title over overview prose when both are present",
+    event && event.programme === "Piano Sonata No. 3 in F minor Op. 5"
+  );
+}
+
 console.log("\ndiscovery helper logic");
 
 {
