@@ -78,6 +78,17 @@ function extractHeadingText(html) {
   return match ? stripTags(match[1]) : "";
 }
 
+function extractTitleTag(html) {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? stripTags(match[1]) : "";
+}
+
+function extractMetaContent(html, attribute, value) {
+  const regex = new RegExp(`<meta[^>]+${attribute}=["']${value}["'][^>]+content=["']([\\s\\S]*?)["'][^>]*>`, "i");
+  const match = html.match(regex);
+  return match ? stripTags(match[1]) : "";
+}
+
 function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -89,12 +100,15 @@ function logDebugForKnownEvent(html, url) {
 
   const lowerHtml = html.toLowerCase();
   const brahmsIndex = lowerHtml.indexOf("brahms");
-  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const jsonLdMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+  const titleTag = extractTitleTag(html);
+  const metaDescription = extractMetaContent(html, "name", "description");
+  const ogDescription = extractMetaContent(html, "property", "og:description");
 
   console.log(`[wigmore-debug] url: ${url}`);
   console.log(`[wigmore-debug] html length: ${html.length}`);
-  console.log(`[wigmore-debug] title tag: ${titleMatch ? stripTags(titleMatch[1]) : "(none)"}`);
+  console.log(`[wigmore-debug] title tag: ${titleTag || "(none)"}`);
+  console.log(`[wigmore-debug] meta description: ${metaDescription || "(none)"}`);
+  console.log(`[wigmore-debug] og description: ${ogDescription || "(none)"}`);
   console.log(`[wigmore-debug] contains brahms: ${brahmsIndex !== -1}`);
 
   if (brahmsIndex !== -1) {
@@ -103,39 +117,42 @@ function logDebugForKnownEvent(html, url) {
     console.log(`[wigmore-debug] snippet around brahms:`);
     console.log(html.slice(start, end));
   }
-
-  if (jsonLdMatch) {
-    console.log(`[wigmore-debug] json-ld snippet:`);
-    console.log(jsonLdMatch[1].slice(0, 1200));
-  } else {
-    console.log(`[wigmore-debug] json-ld snippet: (none)`);
-  }
 }
 
 function extractWigmoreEvent(html, url) {
   logDebugForKnownEvent(html, url);
 
   const title = extractHeadingText(html);
+  const titleTag = extractTitleTag(html);
+  const metaDescription = extractMetaContent(html, "name", "description");
+  const ogDescription = extractMetaContent(html, "property", "og:description");
   const dateSection = extractSection(html, "Date");
   const programme = extractSection(html, "Programme");
   const overview = extractSection(html, "Overview");
   const artists = extractSection(html, "Artists");
   const date = parseWigmoreDate(dateSection);
 
-  const combinedText = `${title} ${programme} ${overview}`.toLowerCase();
+  const combinedText = [title, titleTag, metaDescription, ogDescription, programme, overview, artists]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
   if (!combinedText.includes("brahms")) {
     console.log(`[wigmore] skip no brahms: ${url}`);
     return null;
   }
 
-  console.log(`[wigmore] brahms match: ${title || "(untitled)"} | ${date || "(no-date)"}`);
+  const resolvedTitle = title || titleTag || "Wigmore Hall event";
+  const resolvedProgramme = normaliseWhitespace(programme || overview || metaDescription || ogDescription || artists || "Brahms programme");
+
+  console.log(`[wigmore] brahms match: ${resolvedTitle} | ${date || "(no-date)"}`);
 
   return {
-    title: title || "Wigmore Hall event",
+    title: resolvedTitle,
     date,
     venue: "Wigmore Hall",
     source: "Wigmore Hall",
-    programme: normaliseWhitespace(programme || overview || artists || "Brahms programme"),
+    programme: resolvedProgramme,
     url
   };
 }
