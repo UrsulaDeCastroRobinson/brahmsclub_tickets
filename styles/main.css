@@ -432,3 +432,39 @@ body, html, #root, .responsive-container {
 .club-title, .club-subtitle {
   color: #fff;
 }
+
+.page--brahms-finder {
+  min-height: 100vh;
+  color: white;
+  background: rgba(0, 0, 0, 0.88);
+  padding: 3rem 1rem;
+}
+
+.page--brahms-finder .container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.brahms-performance-list {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.brahms-performance-card {
+  padding: 1rem 1.25rem;
+  border: 1px solid #eee2;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.brahms-performance-card h2 {
+  margin-top: 0;
+}
+
+.brahms-performance-card a {
+  color: #fff;
+  text-decoration: underline;
+}
