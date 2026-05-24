@@ -6,6 +6,7 @@ const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
 const brahmsWorksPath = path.join(__dirname, "data", "brahms-works.json");
 const wigmoreComposerFallbackSelector = ".w-4\\/12, .sm\\:w-4\\/12";
+const modeWordsRegex = /\b(major|minor)\b/g;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -231,7 +232,7 @@ function textContainsTerm(normalisedText, term) {
   if (!term) return false;
   if (new RegExp(`\\b${escapeRegex(term)}\\b`).test(normalisedText)) return true;
 
-  const modeAgnosticTerm = normaliseWhitespace(term.replace(/\b(major|minor)\b/g, ""));
+  const modeAgnosticTerm = normaliseWhitespace(term.replace(modeWordsRegex, ""));
   if (modeAgnosticTerm && modeAgnosticTerm !== term) {
     if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
   }
@@ -270,7 +271,7 @@ function findFirstTermPosition(normalisedText, terms) {
     const tokens = splitTerms(term);
     const indexes = tokens
       .map((token) => tokenPositions.get(token))
-      .filter((index) => index >= 0);
+      .filter((index) => index !== undefined);
     if (indexes.length === 0) return minIndex;
     return Math.min(minIndex, Math.min(...indexes));
   }, Infinity);
@@ -403,9 +404,10 @@ function extractBrahmsWorksFromWigmoreRepertoire($) {
   $(".repertoire-work-item").each((_, item) => {
     // Wigmore currently uses Tailwind utility classes in this left-column block.
     // Keep the generic artist-link selector first, then class-based fallback.
-    const composerText = normaliseWhitespace(
-      $(item).find("a[href^='/artists/']").first().text() || $(item).find(wigmoreComposerFallbackSelector).first().text()
-    );
+    let composerText = normaliseWhitespace($(item).find("a[href^='/artists/']").first().text());
+    if (!composerText) {
+      composerText = normaliseWhitespace($(item).find(wigmoreComposerFallbackSelector).first().text());
+    }
     if (!containsBrahms(composerText)) return;
 
     $(item).find(".repertoire-list .rich-text.inline.bold").each((_, workEl) => {
