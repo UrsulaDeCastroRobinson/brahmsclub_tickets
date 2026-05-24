@@ -221,6 +221,36 @@ console.log("\nextractWigmoreEvent");
   );
 }
 
+console.log("\nextractWigmoreEvent – Wigmore-specific repertoire DOM");
+
+{
+  // Real Wigmore repertoire DOM: June-3-style regression test.
+  // Mirrors the actual .repertoire-work-item markup used on Wigmore Hall event pages.
+  const html = `<html><body>
+    <h1>Chamber recital</h1>
+    <article class="repertoire-items repertoire-work-item bg-almond col-12 pb9 pt5 sm-py5 md-py7 my3 px5 sm-px7 md-px10"><ul class="list-reset"><li class="my3 flex flex-wrap"><div class="col-12 sm-col-6 md-col-5"><a class="items-center transition-color text-decoration-reset flex height-button-narrow type-style-5 black bg-white hover-bg-aquamarine px5 inline-flex md-mr5 cursor-pointer" href="/artists/johannes-brahms">Johannes Brahms</a><div class="type-style-5 px5 pt3 pb4 normalcase">1833-1897</div></div><div class="col-12 sm-col-6 md-col-7"><ul aria-label="Performed pieces" class="repertoire-list list-reset "><li class="cycle-item"><ul class="list-reset"><li class="inline"><span class="flex items-baseline"><div><div class="rich-text inline bold">String Quintet in F Op. 88</div></div></span></li></ul></li></ul></div></li></ul></article>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606031930");
+  assert(
+    "Wigmore repertoire DOM: June-3-style String Quintet in F Op. 88 extracted correctly",
+    event && event.programme === "String Quintet in F, Op. 88"
+  );
+}
+
+{
+  // Real Wigmore repertoire DOM: mixed-composer case — only the Brahms work is returned.
+  const html = `<html><body>
+    <h1>Chamber recital</h1>
+    <article class="repertoire-items repertoire-work-item bg-almond col-12 pb9 pt5 sm-py5 md-py7 my3 px5 sm-px7 md-px10"><ul class="list-reset"><li class="my3 flex flex-wrap"><div class="col-12 sm-col-6 md-col-5"><a class="items-center transition-color text-decoration-reset flex height-button-narrow type-style-5 black bg-white hover-bg-aquamarine px5 inline-flex md-mr5 cursor-pointer" href="/artists/mozart">Wolfgang Amadeus Mozart</a><div class="type-style-5 px5 pt3 pb4 normalcase">1756-1791</div></div><div class="col-12 sm-col-6 md-col-7"><ul aria-label="Performed pieces" class="repertoire-list list-reset "><li class="cycle-item"><ul class="list-reset"><li class="inline"><span class="flex items-baseline"><div><div class="rich-text inline bold">String Quintet in G minor K516</div></div></span></li></ul></li></ul></div></li></ul></article>
+    <article class="repertoire-items repertoire-work-item bg-almond col-12 pb9 pt5 sm-py5 md-py7 my3 px5 sm-px7 md-px10"><ul class="list-reset"><li class="my3 flex flex-wrap"><div class="col-12 sm-col-6 md-col-5"><a class="items-center transition-color text-decoration-reset flex height-button-narrow type-style-5 black bg-white hover-bg-aquamarine px5 inline-flex md-mr5 cursor-pointer" href="/artists/johannes-brahms">Johannes Brahms</a><div class="type-style-5 px5 pt3 pb4 normalcase">1833-1897</div></div><div class="col-12 sm-col-6 md-col-7"><ul aria-label="Performed pieces" class="repertoire-list list-reset "><li class="cycle-item"><ul class="list-reset"><li class="inline"><span class="flex items-baseline"><div><div class="rich-text inline bold">String Quintet in F Op. 88</div></div></span></li></ul></li></ul></div></li></ul></article>
+  </body></html>`;
+  const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606031930");
+  assert(
+    "Wigmore repertoire DOM: mixed-composer case returns only Brahms work",
+    event && event.programme === "String Quintet in F, Op. 88"
+  );
+}
+
 // ---------------------------------------------------------------------------
 // collectWigmoreEventLinksStatic (static-HTML fallback path)
 // ---------------------------------------------------------------------------
