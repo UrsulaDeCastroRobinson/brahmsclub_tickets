@@ -305,7 +305,6 @@ function isBrittenPearsListingPage(url, listingBaseUrl) {
     if (parsed.origin !== listingBase.origin) return false;
     if (pathname === listingPath) {
       if (!parsed.search) return true;
-      if ([...parsed.searchParams.keys()].length !== 1) return false;
       const pageParam = parsed.searchParams.get("page");
       return Number.isInteger(Number(pageParam)) && Number(pageParam) > 0;
     }
@@ -325,20 +324,41 @@ function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
     const listingBase = new URL(listingBaseUrl);
     const listingPath = normalisePathname(listingBase.pathname);
     const pathname = normalisePathname(parsed.pathname);
-    const pageNumber = (() => {
-      if (pathname === listingPath && parsed.searchParams.has("page")) {
-        return Number(parsed.searchParams.get("page"));
-      }
-      const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
-      return match ? Number(match[1]) : 1;
-    })();
+    if (pathname === listingPath) {
+      const canonicalUrl = new URL(parsed.toString());
+      canonicalUrl.hash = "";
+      canonicalUrl.pathname = listingPath;
 
+      if (!canonicalUrl.searchParams.has("page")) {
+        canonicalUrl.search = "";
+        return canonicalUrl.toString();
+      }
+
+      const pageNumber = Number(canonicalUrl.searchParams.get("page"));
+      const params = [...canonicalUrl.searchParams.entries()];
+      params.sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+        if (leftKey === rightKey) return leftValue.localeCompare(rightValue);
+        return leftKey.localeCompare(rightKey);
+      });
+
+      canonicalUrl.search = "";
+      for (const [key, value] of params) {
+        if (key === "page") {
+          canonicalUrl.searchParams.append("page", String(pageNumber));
+        } else {
+          canonicalUrl.searchParams.append(key, value);
+        }
+      }
+
+      return canonicalUrl.toString();
+    }
+
+    const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
+    const pageNumber = match ? Number(match[1]) : 1;
     const canonicalUrl = new URL(listingBaseUrl);
     canonicalUrl.hash = "";
     canonicalUrl.search = "";
-    canonicalUrl.pathname = pageNumber > 1
-      ? `${listingPath}/page/${pageNumber}`
-      : listingPath;
+    canonicalUrl.pathname = pageNumber > 1 ? `${listingPath}/page/${pageNumber}` : listingPath;
     return canonicalUrl.toString();
   } catch (_) {
     return "";
