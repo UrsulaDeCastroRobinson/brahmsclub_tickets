@@ -267,8 +267,12 @@ console.log("\nextractWigmoreEvent");
   </head><body><h1>Chamber recital</h1></body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "meta description Brahms mention without Programme section is dropped",
-    event === null
+    "meta description Brahms mention without Programme section is retained",
+    event !== null
+  );
+  assert(
+    "meta description text is not used as direct programme source",
+    event && event.programme === "Brahms programme"
   );
 }
 
@@ -421,8 +425,12 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202609011930");
   assert(
-    "overview/meta Brahms mention without Programme Brahms evidence is dropped",
-    event === null
+    "overview/meta Brahms mention without Programme Brahms evidence is retained",
+    event !== null
+  );
+  assert(
+    "overview/meta fallback retention does not treat overview as programme",
+    event && event.programme === "Brahms programme"
   );
 }
 
