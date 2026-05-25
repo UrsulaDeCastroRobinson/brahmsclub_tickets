@@ -196,15 +196,31 @@ console.log("\nextractBrittenPearsEventFromDetailPage");
       </main>
     </body></html>`;
 
-  const event = extractBrittenPearsEventFromDetailPage(
+  const result = extractBrittenPearsEventFromDetailPage(
     html,
     "https://www.brittenpearsarts.org/events/cello-and-piano-recital"
   );
+  const event = result.event;
 
   assert("extracts detail-page event", Boolean(event));
   assert("parses detail-page date", event?.date === "2026-06-27");
   assert("parses venue from c-meta definition list", event?.venue === "Snape Maltings Concert Hall");
   assert("canonicalises Brahms work from event detail metadata", event?.programme === "Cello Sonata No. 1 in E minor, Op. 38");
+  assert("returns null rejection on success", result.rejection === null);
+
+  const noBrahmsResult = extractBrittenPearsEventFromDetailPage(
+    `<html><body><main><h1>Mozart Evening</h1><p>A wonderful night of Mozart.</p></main></body></html>`,
+    "https://www.brittenpearsarts.org/events/mozart-evening"
+  );
+  assert("returns no_brahms_mention rejection when Brahms not found", noBrahmsResult.rejection === "no_brahms_mention");
+  assert("returns null event when Brahms not found", noBrahmsResult.event === null);
+
+  const noCanonicalResult = extractBrittenPearsEventFromDetailPage(
+    `<html><body><main><h1>Brahms Evening</h1><p>A great Brahms concert with unknown pieces.</p></main></body></html>`,
+    "https://www.brittenpearsarts.org/events/brahms-evening"
+  );
+  assert("returns no_canonical_work rejection when no canonical work matched", noCanonicalResult.rejection === "no_canonical_work");
+  assert("returns null event when no canonical work matched", noCanonicalResult.event === null);
 }
 
 console.log("\ndedupeEvents");
