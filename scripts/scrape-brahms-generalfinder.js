@@ -5,6 +5,7 @@ const brahmsWorks = require("./data/brahms-works.json");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-generalfinder-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-generalfinder-performances.json");
+const DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES = 200;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -61,6 +62,10 @@ function normaliseForMatch(value) {
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 const brahmsAliasMap = new Map(
@@ -274,6 +279,197 @@ function extractBrittenPearsCardEvents(html, baseUrl) {
   return events;
 }
 
+function normalisePathname(pathname) {
+  const trimmed = String(pathname || "").replace(/^\/+/, "").replace(/\/+$/, "");
+  return trimmed ? `/${trimmed}` : "";
+}
+
+function stripUrlHash(url) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function isBrittenPearsListingPage(url, listingBaseUrl) {
+  try {
+    const parsed = new URL(url);
+    const listingBase = new URL(listingBaseUrl);
+    const pathname = normalisePathname(parsed.pathname);
+    const listingPath = normalisePathname(listingBase.pathname);
+
+    if (parsed.origin !== listingBase.origin) return false;
+    if (pathname === listingPath) {
+      if (!parsed.search) return true;
+      if ([...parsed.searchParams.keys()].length !== 1) return false;
+      const pageParam = parsed.searchParams.get("page");
+      return Number.isInteger(Number(pageParam)) && Number(pageParam) > 0;
+    }
+
+    const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
+    return Boolean(match && Number(match[1]) > 0 && !parsed.search);
+  } catch (_) {
+    return false;
+  }
+}
+
+function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
+  try {
+    const parsed = new URL(url, listingBaseUrl);
+    if (!isBrittenPearsListingPage(parsed.toString(), listingBaseUrl)) return "";
+
+    const listingBase = new URL(listingBaseUrl);
+    const listingPath = normalisePathname(listingBase.pathname);
+    const pathname = normalisePathname(parsed.pathname);
+    const pageNumber = (() => {
+      if (pathname === listingPath && parsed.searchParams.has("page")) {
+        return Number(parsed.searchParams.get("page"));
+      }
+      const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
+      return match ? Number(match[1]) : 1;
+    })();
+
+    const canonicalUrl = new URL(listingBaseUrl);
+    canonicalUrl.hash = "";
+    canonicalUrl.search = "";
+    canonicalUrl.pathname = pageNumber > 1
+      ? `${listingPath}/page/${pageNumber}`
+      : listingPath;
+    return canonicalUrl.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function extractBrittenPearsListingPageUrls(html, listingBaseUrl) {
+  const $ = cheerio.load(html);
+  const pages = new Set();
+  const baseListingUrl = canonicaliseBrittenPearsListingPageUrl(listingBaseUrl, listingBaseUrl);
+  if (baseListingUrl) pages.add(baseListingUrl);
+
+  $("a[href], link[rel='next'][href]").each((_, element) => {
+    const href = $(element).attr("href") || "";
+    const canonicalUrl = canonicaliseBrittenPearsListingPageUrl(href, listingBaseUrl);
+    if (!canonicalUrl) return;
+    pages.add(canonicalUrl);
+  });
+
+  return [...pages];
+}
+
+function isBrittenPearsEventUrl(url, listingBaseUrl) {
+  try {
+    const parsed = new URL(url);
+    const listingBase = new URL(listingBaseUrl);
+    const pathname = normalisePathname(parsed.pathname);
+    const listingPath = normalisePathname(listingBase.pathname);
+
+    if (parsed.origin !== listingBase.origin) return false;
+    if (!pathname.startsWith(`${listingPath}/`)) return false;
+    if (isBrittenPearsListingPage(url, listingBaseUrl)) return false;
+
+    const suffix = pathname.slice(listingPath.length + 1);
+    if (!suffix) return false;
+    if (/^page(?:\/|$)/i.test(suffix)) return false;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function extractBrittenPearsEventUrls(html, listingBaseUrl) {
+  const $ = cheerio.load(html);
+  const events = new Set();
+
+  $("a[href*='/whats-on/']").each((_, link) => {
+    const href = $(link).attr("href") || "";
+    const absoluteUrl = stripUrlHash(toAbsoluteUrl(href, listingBaseUrl));
+    if (!absoluteUrl) return;
+    if (!isBrittenPearsEventUrl(absoluteUrl, listingBaseUrl)) return;
+    events.add(absoluteUrl);
+  });
+
+  return [...events];
+}
+
+function extractBrittenPearsMetaListRows($) {
+  const rows = [];
+
+  $("dl.c-meta__list").each((_, list) => {
+    const items = $(list).find(".c-meta__item");
+    if (items.length) {
+      items.each((_, item) => {
+        const key = normaliseWhitespace($(item).find("dt").first().text());
+        const value = normaliseWhitespace($(item).find("dd").first().text());
+        const row = normaliseWhitespace([key, value].filter(Boolean).join(" "));
+        if (row) rows.push(row);
+      });
+      return;
+    }
+
+    const terms = $(list).find("dt");
+    terms.each((_, term) => {
+      const key = normaliseWhitespace($(term).text());
+      const value = normaliseWhitespace($(term).next("dd").first().text());
+      const row = normaliseWhitespace([key, value].filter(Boolean).join(" "));
+      if (row) rows.push(row);
+    });
+  });
+
+  return rows;
+}
+
+function extractBrittenPearsEventFromDetailPage(html, eventUrl) {
+  const $ = cheerio.load(html);
+  const title = normaliseWhitespace(
+    $("h1").first().text() ||
+    $("meta[property='og:title']").attr("content") ||
+    $("title").first().text()
+  ) || "Britten Pears Arts event";
+  const metaDescription = normaliseWhitespace(
+    $("meta[name='description']").attr("content") ||
+    $("meta[property='og:description']").attr("content")
+  );
+  const metaListRows = extractBrittenPearsMetaListRows($);
+  const metaListText = metaListRows.join(" | ");
+
+  const dateValue = normaliseWhitespace(
+    $("time[datetime]").first().attr("datetime")
+    || $("time").first().text()
+    || $("dt:contains('Date')").first().next("dd").text()
+    || $("dt:contains('When')").first().next("dd").text()
+    || $("dt:contains('Time')").first().next("dd").text()
+    || $("[class*='date']").first().text()
+  );
+  const venue = normaliseWhitespace(
+    $("dt:contains('Venue')").first().next("dd").text()
+    || $("dt:contains('Location')").first().next("dd").text()
+    || $("[class*='venue'], [class*='location']").first().text()
+    || "Britten Pears Arts"
+  );
+  const mainText = normaliseWhitespace($("main").first().text() || $("body").text());
+  const detailText = normaliseWhitespace(
+    [title, metaDescription, metaListText, mainText].filter(Boolean).join(" ")
+  );
+
+  if (!containsBrahms(detailText)) return null;
+  const canonicalWorks = extractCanonicalBrahmsWorksFromText(detailText);
+  if (!canonicalWorks.length) return null;
+
+  return {
+    title,
+    date: formatIsoDate(dateValue),
+    venue: venue || "Britten Pears Arts",
+    source: "Britten Pears Arts",
+    programme: canonicalWorks.join(" / "),
+    url: eventUrl,
+  };
+}
+
 function dedupeEvents(events) {
   const seen = new Set();
   return events.filter((event) => {
@@ -294,12 +490,45 @@ async function fetchHtml(url) {
 
 async function scrapeBrittenPearsWhatsOn(source) {
   const listingUrl = source.homepage || "https://www.brittenpearsarts.org/whats-on";
-  const html = await fetchHtml(listingUrl);
+  const pendingPages = [listingUrl];
+  let nextPageIndex = 0;
+  const visitedPages = new Set();
+  const discoveredEventUrls = new Set();
+  const configuredLimit = Number(source.maxPaginationPages);
+  const maxListingPages = Number.isInteger(configuredLimit) && configuredLimit > 0
+    ? configuredLimit
+    : DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES;
 
-  const items = dedupeEvents([
-    ...extractBrittenPearsJsonLdEvents(html, listingUrl),
-    ...extractBrittenPearsCardEvents(html, listingUrl),
-  ])
+  while (nextPageIndex < pendingPages.length && visitedPages.size < maxListingPages) {
+    const pageUrl = pendingPages[nextPageIndex];
+    nextPageIndex += 1;
+    const pageKey = stripUrlHash(pageUrl);
+    if (!pageKey || visitedPages.has(pageKey)) continue;
+    visitedPages.add(pageKey);
+
+    const html = await fetchHtml(pageUrl);
+    for (const discoveredPageUrl of extractBrittenPearsListingPageUrls(html, listingUrl)) {
+      if (!visitedPages.has(discoveredPageUrl)) {
+        pendingPages.push(discoveredPageUrl);
+      }
+    }
+    for (const eventUrl of extractBrittenPearsEventUrls(html, listingUrl)) {
+      discoveredEventUrls.add(eventUrl);
+    }
+  }
+
+  const parsedEvents = [];
+  for (const eventUrl of discoveredEventUrls) {
+    try {
+      const html = await fetchHtml(eventUrl);
+      const event = extractBrittenPearsEventFromDetailPage(html, eventUrl);
+      if (event) parsedEvents.push(event);
+    } catch (error) {
+      console.warn(`Failed to parse Britten Pears event ${eventUrl}: ${error.message}`);
+    }
+  }
+
+  const items = dedupeEvents(parsedEvents)
     .filter((item) => item.date ? isWithinNextMonth(item.date) : true)
     .sort((a, b) => {
       if (a.date && b.date) return a.date.localeCompare(b.date);
@@ -354,6 +583,9 @@ module.exports = {
   formatIsoDate,
   extractBrittenPearsJsonLdEvents,
   extractBrittenPearsCardEvents,
+  extractBrittenPearsListingPageUrls,
+  extractBrittenPearsEventUrls,
+  extractBrittenPearsEventFromDetailPage,
   dedupeEvents,
 };
 
