@@ -264,11 +264,29 @@ console.log("\nextractWigmoreEvent");
 {
   const html = `<html><head>
     <meta name="description" content="A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114.">
-  </head><body><h1>Chamber recital</h1></body></html>`;
+  </head><body>
+    <h1>Chamber recital</h1>
+    <h3>Programme</h3>
+    <p>Schubert: Sonata in A major, D. 664</p>
+  </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
-    "meta description Brahms mention without Programme section is dropped",
-    event === null
+    "meta description Brahms mention without Programme section is retained",
+    event !== null
+  );
+  // Retained by broad page Brahms signals, but programme-specific sources have
+  // no Brahms work match, so fallback should stay the generic Brahms label.
+  assert(
+    "meta description text is not used as direct programme source",
+    event && event.programme === "Brahms programme"
+  );
+  assert(
+    "meta description wording is excluded from resolved programme",
+    event && !/clarinet trio in a minor/i.test(event.programme)
+  );
+  assert(
+    "non-Brahms programme text is excluded from retained fallback programme",
+    event && !/schubert/i.test(event.programme)
   );
 }
 
@@ -421,8 +439,22 @@ console.log("\nextractWigmoreEvent");
   </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202609011930");
   assert(
-    "overview/meta Brahms mention without Programme Brahms evidence is dropped",
-    event === null
+    "overview/meta Brahms mention without Programme Brahms evidence is retained",
+    event !== null
+  );
+  // Retained by broad page Brahms signals; programme section is non-Brahms, so
+  // overview/meta text should not become resolved programme content.
+  assert(
+    "overview/meta fallback retention does not treat overview as programme",
+    event && event.programme === "Brahms programme"
+  );
+  assert(
+    "overview wording is excluded from resolved programme",
+    event && !/legacy/i.test(event.programme)
+  );
+  assert(
+    "non-Brahms programme section text is excluded from fallback programme",
+    event && !/schumann/i.test(event.programme)
   );
 }
 

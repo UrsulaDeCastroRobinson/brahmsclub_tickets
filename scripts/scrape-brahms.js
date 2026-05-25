@@ -522,6 +522,11 @@ function extractWigmoreEvent(html, url) {
   });
 
   const wigmoreRepertoireText = normaliseWhitespace($(".repertoire-work-item").text());
+  const metaText = normaliseWhitespace([
+    extractMetaContent($, "name", "description"),
+    extractMetaContent($, "property", "og:description"),
+  ].filter(Boolean).join(" "));
+  const bodyText = extractBodyText($);
   const programmeOnlyText = [
     programme,
     ...(structuredProgrammeItems || []).flat(),
@@ -535,8 +540,13 @@ function extractWigmoreEvent(html, url) {
     wigmoreRepertoireWorks.length > 0
     || extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems).length > 0
     || findBrahmsProgrammeMatches(programmeOnlyText).length > 0;
+  const hasBrahmsInBroadPageSignals = containsBrahms([
+    resolvedTitle,
+    bodyText,
+    metaText,
+  ].filter(Boolean).join(" "));
 
-  if (!hasBrahmsInProgramme && !hasBrahmsWorkInProgramme) {
+  if (!hasBrahmsInProgramme && !hasBrahmsWorkInProgramme && !hasBrahmsInBroadPageSignals) {
     return null;
   }
 
