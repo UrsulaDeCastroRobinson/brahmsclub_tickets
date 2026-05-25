@@ -21,14 +21,24 @@ const browserHeaders = {
 
 function getNextMonthDateRange() {
   const now = new Date();
-  const start = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
-  const end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 2, 0));
+  const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999));
   return { start, end };
 }
 
 function getNextMonthLabel() {
-  const { start } = getNextMonthDateRange();
-  return start.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const now = new Date();
+  const currentMonthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  const nextMonthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+  const sameYear = currentMonthStart.getUTCFullYear() === nextMonthStart.getUTCFullYear();
+  if (sameYear) {
+    const month1 = currentMonthStart.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+    const month2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    return `${month1}–${month2}`;
+  }
+  const label1 = currentMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  return `${label1}–${label2}`;
 }
 
 function isWithinNextMonth(dateString) {
@@ -242,7 +252,7 @@ async function extractRenderedEventLinks(page) {
 /**
  * Discover Wigmore Hall event links by rendering the listing page with a
  * headless browser and scrolling to trigger lazy-loaded / infinite-scroll content.
- * @returns {Promise<string[]>} Array of full event URLs within the next calendar month, sorted.
+ * @returns {Promise<string[]>} Array of full event URLs from today through end of next calendar month, sorted.
  */
 async function collectWigmoreEventLinksWithBrowser() {
   let chromium;
@@ -308,7 +318,7 @@ async function collectWigmoreEventLinksWithBrowser() {
 /**
  * Fallback: crawl Wigmore Hall listing pages 0–20 using plain HTTP fetches.
  * This works for statically-rendered events but may miss lazy-loaded content.
- * @returns {Promise<string[]>} Array of full event URLs within the next calendar month, sorted.
+ * @returns {Promise<string[]>} Array of full event URLs from today through end of next calendar month, sorted.
  */
 async function collectWigmoreEventLinksStatic() {
   const eventLinkSet = new Set();
@@ -333,7 +343,7 @@ async function collectWigmoreEventLinksStatic() {
 }
 
 /**
- * Discover Wigmore Hall event links for the next calendar month.
+ * Discover Wigmore Hall event links from today through end of next calendar month.
  * Attempts browser-based rendering first to handle lazy-loaded listing pages;
  * falls back to static HTML fetching if Playwright is unavailable.
  * @returns {Promise<string[]>}
