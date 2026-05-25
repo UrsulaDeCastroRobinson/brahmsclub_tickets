@@ -21,15 +21,15 @@ const browserHeaders = {
 
 function getNextMonthDateRange() {
   const now = new Date();
-  const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  const end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999));
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0, 23, 59, 59, 999));
   return { start, end };
 }
 
 function getNextMonthLabel() {
   const now = new Date();
-  const currentMonthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-  const nextMonthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+  const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const sameYear = currentMonthStart.getUTCFullYear() === nextMonthStart.getUTCFullYear();
   if (sameYear) {
     const month1 = currentMonthStart.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
