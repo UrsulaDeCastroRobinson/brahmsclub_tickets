@@ -307,11 +307,11 @@ function isBrittenPearsListingPage(url, listingBaseUrl) {
       if (!parsed.search) return true;
       if ([...parsed.searchParams.keys()].length !== 1) return false;
       const pageParam = parsed.searchParams.get("page");
-      return Number.isInteger(Number(pageParam)) && Number(pageParam) > 1;
+      return Number.isInteger(Number(pageParam)) && Number(pageParam) > 0;
     }
 
     const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
-    return Boolean(match && Number(match[1]) > 1 && !parsed.search);
+    return Boolean(match && Number(match[1]) > 0 && !parsed.search);
   } catch (_) {
     return false;
   }
@@ -325,14 +325,13 @@ function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
     const listingBase = new URL(listingBaseUrl);
     const listingPath = normalisePathname(listingBase.pathname);
     const pathname = normalisePathname(parsed.pathname);
-    let pageNumber = 1;
-
-    if (pathname === listingPath && parsed.searchParams.has("page")) {
-      pageNumber = Number(parsed.searchParams.get("page"));
-    } else {
+    const pageNumber = (() => {
+      if (pathname === listingPath && parsed.searchParams.has("page")) {
+        return Number(parsed.searchParams.get("page"));
+      }
       const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
-      if (match) pageNumber = Number(match[1]);
-    }
+      return match ? Number(match[1]) : 1;
+    })();
 
     const canonicalUrl = new URL(listingBaseUrl);
     canonicalUrl.hash = "";

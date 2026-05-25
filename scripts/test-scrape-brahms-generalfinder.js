@@ -137,6 +137,8 @@ console.log("\nextractBrittenPearsCardEvents");
 console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUrls");
 {
   const html = `<html><body>
+    <a href="/whats-on?page=1">Page 1 query form</a>
+    <a href="/whats-on/page/1">Page 1 path form</a>
     <a href="/whats-on?page=2">Next</a>
     <a href="/whats-on/page/3">Page 3</a>
     <a href="/whats-on?page=2&view=grid">Invalid page variant with extra params</a>
@@ -157,6 +159,7 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
 
   assert("canonicalises query pagination URL to /page/N form", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/2"));
   assert("keeps /page/N listing pages", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/3"));
+  assert("canonicalises page 1 variants to base listing URL", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on").length === 1);
   assert("does not keep non-canonical listing URL variants", !listingPages.includes("https://www.brittenpearsarts.org/whats-on?page=2&view=grid"));
   assert("rejects non-numeric listing page variants", !listingPages.some((url) => url.includes("page=abc") || url.includes("/page/two")));
   assert("deduplicates canonical listing pages", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/page/2").length === 1);
