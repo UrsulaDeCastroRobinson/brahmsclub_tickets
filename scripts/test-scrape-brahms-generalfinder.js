@@ -145,9 +145,11 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
     <a href="/whats-on/page/2?view=grid">Invalid path variant with query params</a>
     <a href="/whats-on?page=abc">Invalid non-numeric page</a>
     <a href="/whats-on/page/two">Invalid non-numeric path page</a>
-    <a href="/whats-on/cello-sonata-recital">Cello recital</a>
-    <a href="/whats-on/cello-sonata-recital#tickets">Cello recital duplicate with hash</a>
-    <a href="/whats-on/chamber-evening">Chamber evening</a>
+    <a href="/events/cello-sonata-recital">Cello recital</a>
+    <a href="/events/cello-sonata-recital#tickets">Cello recital duplicate with hash</a>
+    <a href="/events/chamber-evening">Chamber evening</a>
+    <a href="/whats-on/cello-sonata-recital">Legacy listing-path event URL shape</a>
+    <a href="/events">Events hub</a>
     <a href="/news/article">News</a>
   </body></html>`;
   const baseUrl = "https://www.brittenpearsarts.org/whats-on";
@@ -163,9 +165,10 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   assert("does not keep non-canonical listing URL variants", !listingPages.includes("https://www.brittenpearsarts.org/whats-on?page=2&view=grid"));
   assert("rejects non-numeric listing page variants", !listingPages.some((url) => url.includes("page=abc") || url.includes("/page/two")));
   assert("deduplicates canonical listing pages", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/page/2").length === 1);
-  assert("collects event detail URLs", eventUrlSet.has("https://www.brittenpearsarts.org/whats-on/cello-sonata-recital"));
-  assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/cello-sonata-recital").length === 1);
-  assert("ignores listing page URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/page/")));
+  assert("collects /events detail URLs", eventUrlSet.has("https://www.brittenpearsarts.org/events/cello-sonata-recital"));
+  assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/events/cello-sonata-recital").length === 1);
+  assert("ignores /whats-on URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/")));
+  assert("ignores non-slug /events hubs", !eventUrls.includes("https://www.brittenpearsarts.org/events"));
 }
 
 console.log("\nextractBrittenPearsEventFromDetailPage");
@@ -195,7 +198,7 @@ console.log("\nextractBrittenPearsEventFromDetailPage");
 
   const event = extractBrittenPearsEventFromDetailPage(
     html,
-    "https://www.brittenpearsarts.org/whats-on/cello-and-piano-recital"
+    "https://www.brittenpearsarts.org/events/cello-and-piano-recital"
   );
 
   assert("extracts detail-page event", Boolean(event));
