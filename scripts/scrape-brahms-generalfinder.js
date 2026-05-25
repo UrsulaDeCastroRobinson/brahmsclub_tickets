@@ -335,6 +335,7 @@ function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
       }
 
       const pageNumber = Number(canonicalUrl.searchParams.get("page"));
+      canonicalUrl.searchParams.set("page", String(pageNumber));
       const params = [...canonicalUrl.searchParams.entries()];
       params.sort(([leftKey, leftValue], [rightKey, rightValue]) => {
         if (leftKey === rightKey) return leftValue.localeCompare(rightValue);
@@ -343,11 +344,7 @@ function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
 
       canonicalUrl.search = "";
       for (const [key, value] of params) {
-        if (key === "page") {
-          canonicalUrl.searchParams.append("page", String(pageNumber));
-        } else {
-          canonicalUrl.searchParams.append(key, value);
-        }
+        canonicalUrl.searchParams.append(key, value);
       }
 
       return canonicalUrl.toString();
