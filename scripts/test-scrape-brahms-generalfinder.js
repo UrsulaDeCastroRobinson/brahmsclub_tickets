@@ -140,8 +140,11 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
     <a href="/whats-on?page=1">Page 1 query form</a>
     <a href="/whats-on/page/1">Page 1 path form</a>
     <a href="/whats-on?page=2">Next</a>
+    <a href="/whats-on?filter=type%3Aperformances&page=2">Page 2 with filter query</a>
+    <a href="/whats-on?page=2&filter=type%3Aperformances">Page 2 with reordered query params</a>
+    <a href="/whats-on?page=3&filter=type%3Aperformances%20AND%20NOT%20hideFromWhatsOn%3Atrue">Page 3 real filter format</a>
     <a href="/whats-on/page/3">Page 3</a>
-    <a href="/whats-on?page=2&view=grid">Invalid page variant with extra params</a>
+    <a href="/whats-on?view=grid">Invalid listing variant without page</a>
     <a href="/whats-on/page/2?view=grid">Invalid path variant with query params</a>
     <a href="/whats-on?page=abc">Invalid non-numeric page</a>
     <a href="/whats-on/page/two">Invalid non-numeric path page</a>
@@ -159,12 +162,15 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   const listingPageSet = new Set(listingPages);
   const eventUrlSet = new Set(eventUrls);
 
-  assert("canonicalises query pagination URL to /page/N form", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/2"));
+  assert("keeps query pagination URL", listingPageSet.has("https://www.brittenpearsarts.org/whats-on?page=2"));
+  assert("keeps query pagination URLs with filter state", listingPageSet.has("https://www.brittenpearsarts.org/whats-on?filter=type%3Aperformances&page=2"));
+  assert("dedupes equivalent query URLs with reordered params", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on?filter=type%3Aperformances&page=2").length === 1);
+  assert("keeps real-world filter query format", listingPageSet.has("https://www.brittenpearsarts.org/whats-on?filter=type%3Aperformances+AND+NOT+hideFromWhatsOn%3Atrue&page=3"));
   assert("keeps /page/N listing pages", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/3"));
   assert("canonicalises page 1 variants to base listing URL", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on").length === 1);
-  assert("does not keep non-canonical listing URL variants", !listingPages.includes("https://www.brittenpearsarts.org/whats-on?page=2&view=grid"));
+  assert("does not keep listing variants without a numeric page", !listingPages.includes("https://www.brittenpearsarts.org/whats-on?view=grid"));
   assert("rejects non-numeric listing page variants", !listingPages.some((url) => url.includes("page=abc") || url.includes("/page/two")));
-  assert("deduplicates canonical listing pages", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/page/2").length === 1);
+  assert("deduplicates canonical page=2 listing pages", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on?page=2").length === 1);
   assert("collects /events detail URLs", eventUrlSet.has("https://www.brittenpearsarts.org/events/cello-sonata-recital"));
   assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/events/cello-sonata-recital").length === 1);
   assert("ignores /whats-on URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/")));
