@@ -26,6 +26,10 @@ function buildItemKey(item) {
     .join("|");
 }
 
+function hasRenderableContent(item) {
+  return Boolean(item.title || item.date || item.venue || item.source || item.programme || item.url);
+}
+
 function parseTimestamp(value) {
   if (!value) return null;
   const timestamp = Date.parse(value);
@@ -41,8 +45,9 @@ function aggregateFeedPayloads(payloads) {
 
     items.forEach((rawItem) => {
       const item = normaliseItem(rawItem);
+      if (!hasRenderableContent(item)) return;
       const key = buildItemKey(item);
-      if (!key || seenKeys.has(key)) return;
+      if (seenKeys.has(key)) return;
       seenKeys.add(key);
       combinedItems.push(item);
     });
@@ -127,13 +132,17 @@ export default function BrahmsFinderMain() {
           <Link className="back-link" href="/">Back to Home</Link>
 
           {loading && <p>Loading performances…</p>}
-          {error && <p>{error}</p>}
+          {error && <p role="alert">{error}</p>}
 
           {!loading && !error && (
             <>
-              {warnings.map((warning) => (
-                <p key={warning}>{warning}</p>
-              ))}
+              {warnings.length > 0 && (
+                <div role="alert" aria-live="polite">
+                  {warnings.map((warning) => (
+                    <p key={warning}>{warning}</p>
+                  ))}
+                </div>
+              )}
 
               <p><strong>Month:</strong> {data.month || "Not available yet"}</p>
               <p><strong>Last updated:</strong> {data.generatedAt || "Not available yet"}</p>
@@ -142,8 +151,8 @@ export default function BrahmsFinderMain() {
                 <p>No performances found yet.</p>
               ) : (
                 <ul className="brahms-performance-list">
-                  {data.items.map((item, index) => (
-                    <li key={`${item.source}-${item.url}-${index}`} className="brahms-performance-card">
+                  {data.items.map((item) => (
+                    <li key={buildItemKey(item)} className="brahms-performance-card">
                       <h2>{item.title}</h2>
                       <p><strong>Date:</strong> {item.date}</p>
                       <p><strong>Venue:</strong> {item.venue}</p>
