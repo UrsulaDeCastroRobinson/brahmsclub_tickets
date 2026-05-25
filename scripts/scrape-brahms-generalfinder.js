@@ -276,8 +276,8 @@ function extractBrittenPearsCardEvents(html, baseUrl) {
 }
 
 function normalisePathname(pathname) {
-  const normalised = `/${String(pathname || "").replace(/^\/+/, "").replace(/\/+$/, "")}`;
-  return normalised === "/" ? "/" : normalised;
+  const trimmed = String(pathname || "").replace(/^\/+/, "").replace(/\/+$/, "");
+  return trimmed ? `/${trimmed}` : "";
 }
 
 function stripUrlHash(url) {
@@ -455,6 +455,7 @@ async function fetchHtml(url) {
 async function scrapeBrittenPearsWhatsOn(source) {
   const listingUrl = source.homepage || "https://www.brittenpearsarts.org/whats-on";
   const pendingPages = [listingUrl];
+  let nextPageIndex = 0;
   const visitedPages = new Set();
   const discoveredEventUrls = new Set();
   const configuredLimit = Number(source.maxPaginationPages);
@@ -462,8 +463,9 @@ async function scrapeBrittenPearsWhatsOn(source) {
     ? Math.floor(configuredLimit)
     : DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES;
 
-  while (pendingPages.length && visitedPages.size < maxListingPages) {
-    const pageUrl = pendingPages.shift();
+  while (nextPageIndex < pendingPages.length && visitedPages.size < maxListingPages) {
+    const pageUrl = pendingPages[nextPageIndex];
+    nextPageIndex += 1;
     const pageKey = stripUrlHash(pageUrl);
     if (!pageKey || visitedPages.has(pageKey)) continue;
     visitedPages.add(pageKey);
