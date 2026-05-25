@@ -351,11 +351,11 @@ async function collectWigmoreEventLinksWithBrowser() {
       timeout: 30000,
     });
 
-    // Scroll repeatedly to trigger lazy loading; stop once the link count stabilises
-    // across three consecutive scroll attempts (no new links loaded).
-    // 30 scrolls provides enough headroom to load a full month of events from a
-    // typical Wigmore Hall listing page without waiting indefinitely.
-    const MAX_SCROLLS = 30;
+    // Scroll repeatedly to trigger lazy loading; be patient because the Wigmore
+    // Hall listing page can take a while to append new results after scrolling.
+    const MAX_SCROLLS = 80;
+    const STABLE_ROUNDS_LIMIT = 8;
+    const SCROLL_SETTLE_MS = 1500;
     let previousCount = 0;
     let stableRounds = 0;
 
@@ -365,19 +365,17 @@ async function collectWigmoreEventLinksWithBrowser() {
 
       if (eventLinkSet.size === previousCount) {
         stableRounds++;
-        if (stableRounds >= 3) break;
+        if (stableRounds >= STABLE_ROUNDS_LIMIT) break;
       } else {
         stableRounds = 0;
         previousCount = eventLinkSet.size;
       }
 
-      // Scroll to bottom and wait for new content to render
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      // Wait for network activity from lazy loading to settle before extracting new links
-      await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(SCROLL_SETTLE_MS);
+      await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
     }
 
-    // Final pass after all scrolling is complete
     const finalLinks = await extractRenderedEventLinks(page);
     finalLinks.forEach((l) => eventLinkSet.add(l));
 
