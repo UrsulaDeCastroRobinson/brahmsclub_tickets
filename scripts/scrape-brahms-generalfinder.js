@@ -378,7 +378,7 @@ function extractBrittenPearsEventUrls(html, listingBaseUrl) {
   const $ = cheerio.load(html);
   const events = new Set();
 
-  $("a[href*='/events/']").each((_, link) => {
+  $("a[href]").each((_, link) => {
     const href = $(link).attr("href") || "";
     const absoluteUrl = stripUrlHash(toAbsoluteUrl(href, listingBaseUrl));
     if (!absoluteUrl) return;

@@ -168,7 +168,7 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   assert("collects /events detail URLs", eventUrlSet.has("https://www.brittenpearsarts.org/events/cello-sonata-recital"));
   assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/events/cello-sonata-recital").length === 1);
   assert("ignores /whats-on URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/")));
-  assert("ignores non-slug /events hubs", !eventUrls.includes("https://www.brittenpearsarts.org/events"));
+  assert("ignores non-slug /events hubs", !eventUrlSet.has("https://www.brittenpearsarts.org/events"));
 }
 
 console.log("\nextractBrittenPearsEventFromDetailPage");
