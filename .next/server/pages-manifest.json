@@ -1,1 +1,8 @@
-{"/_app":"pages/_app.js","/_error":"pages/_error.js","/_document":"pages/_document.js","/api/book":"pages/api/book.js","/api":"pages/api.js","/brahms-finder":"pages/brahms-finder.html","/booking":"pages/booking.html","/brahms-generalfinder":"pages/brahms-generalfinder.html","/":"pages/index.html","/schedule":"pages/schedule.html","/404":"pages/404.html"}
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/": "pages/index.js",
+  "/schedule": "pages/schedule.js",
+  "/booking": "pages/booking.js"
+}
