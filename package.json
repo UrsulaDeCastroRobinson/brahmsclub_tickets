@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "scrape:brahms": "node scripts/scrape-brahms.js",
+    "scrape:brahms-generalfinder": "node scripts/scrape-brahms-generalfinder.js",
+    "scrape:brahms:all": "npm run scrape:brahms && npm run scrape:brahms-generalfinder",
     "test:scrape": "node scripts/test-scrape-brahms.js",
+    "test:scrape:general": "node scripts/test-scrape-brahms-generalfinder.js",
     "playwright:install": "playwright install chromium --with-deps"
   },
   "dependencies": {
