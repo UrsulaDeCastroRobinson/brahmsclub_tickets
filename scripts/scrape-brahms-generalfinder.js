@@ -366,16 +366,9 @@ function isBrittenPearsEventUrl(url, listingBaseUrl) {
     const parsed = new URL(url);
     const listingBase = new URL(listingBaseUrl);
     const pathname = normalisePathname(parsed.pathname);
-    const listingPath = normalisePathname(listingBase.pathname);
 
     if (parsed.origin !== listingBase.origin) return false;
-    if (!pathname.startsWith(`${listingPath}/`)) return false;
-    if (isBrittenPearsListingPage(url, listingBaseUrl)) return false;
-
-    const suffix = pathname.slice(listingPath.length + 1);
-    if (!suffix) return false;
-    if (/^page(?:\/|$)/i.test(suffix)) return false;
-    return true;
+    return /^\/events\/[^/]+$/i.test(pathname);
   } catch (_) {
     return false;
   }
@@ -385,7 +378,7 @@ function extractBrittenPearsEventUrls(html, listingBaseUrl) {
   const $ = cheerio.load(html);
   const events = new Set();
 
-  $("a[href*='/whats-on/']").each((_, link) => {
+  $("a[href]").each((_, link) => {
     const href = $(link).attr("href") || "";
     const absoluteUrl = stripUrlHash(toAbsoluteUrl(href, listingBaseUrl));
     if (!absoluteUrl) return;
