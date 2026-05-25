@@ -1,0 +1,365 @@
+const fs = require("fs");
+const path = require("path");
+const cheerio = require("cheerio");
+const brahmsWorks = require("./data/brahms-works.json");
+
+const sourcesPath = path.join(__dirname, "..", "data", "brahms-generalfinder-sources.json");
+const outputPath = path.join(__dirname, "..", "public", "data", "brahms-generalfinder-performances.json");
+
+const browserHeaders = {
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "accept-language": "en-GB,en;q=0.9,en-US;q=0.8",
+  "cache-control": "no-cache",
+  "pragma": "no-cache",
+  "referer": "https://www.google.com/",
+};
+
+function getNextMonthDateRange() {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0, 23, 59, 59, 999));
+  return { start, end };
+}
+
+function getNextMonthLabel() {
+  const now = new Date();
+  const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const sameYear = currentMonthStart.getUTCFullYear() === nextMonthStart.getUTCFullYear();
+  if (sameYear) {
+    const month1 = currentMonthStart.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+    const month2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    return `${month1}–${month2}`;
+  }
+  const label1 = currentMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  return `${label1}–${label2}`;
+}
+
+function isWithinNextMonth(dateString) {
+  if (!dateString) return false;
+  const parsed = new Date(`${dateString}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const { start, end } = getNextMonthDateRange();
+  return parsed >= start && parsed <= end;
+}
+
+function containsBrahms(text) {
+  return /\bbrahms\b/i.test(text || "");
+}
+
+function normaliseWhitespace(value) {
+  return (value || "").replace(/\s+/g, " ").trim();
+}
+
+function normaliseForMatch(value) {
+  return normaliseWhitespace(value || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const brahmsAliasMap = new Map(
+  brahmsWorks.flatMap((work) =>
+    [work.canonical_title, ...(work.aliases || [])].map((alias) => [normaliseForMatch(alias), work.canonical_title])
+  )
+);
+
+function canonicaliseBrahmsWorkTitle(title) {
+  const normalisedTitle = normaliseForMatch(title);
+  if (!normalisedTitle) return "";
+
+  if (brahmsAliasMap.has(normalisedTitle)) {
+    return brahmsAliasMap.get(normalisedTitle);
+  }
+
+  const candidates = brahmsWorks
+    .map((work) => ({
+      work,
+      matchesRequired: (work.required_terms || []).every((term) => normalisedTitle.includes(normaliseForMatch(term))),
+      optionalMatches: (work.optional_terms || []).filter((term) => normalisedTitle.includes(normaliseForMatch(term))).length,
+    }))
+    .filter((candidate) => candidate.matchesRequired);
+
+  if (!candidates.length) return "";
+
+  const bestOptionalMatches = Math.max(...candidates.map((candidate) => candidate.optionalMatches));
+  if (bestOptionalMatches === 0) return "";
+
+  const bestCandidates = candidates.filter((candidate) => candidate.optionalMatches === bestOptionalMatches);
+  return bestCandidates.length === 1 ? bestCandidates[0].work.canonical_title : "";
+}
+
+function extractCanonicalBrahmsWorksFromText(text) {
+  const fragments = normaliseWhitespace(text)
+    .split(/[|;/\n]/)
+    .map((fragment) => normaliseWhitespace(fragment))
+    .filter(Boolean);
+
+  const works = [];
+  for (const fragment of fragments) {
+    const canonical = canonicaliseBrahmsWorkTitle(fragment);
+    if (canonical) works.push(canonical);
+  }
+
+  const normalisedText = ` ${normaliseForMatch(text)} `;
+  for (const work of brahmsWorks) {
+    const aliases = [work.canonical_title, ...(work.aliases || [])];
+    const hasExplicitMatch = aliases.some((alias) => {
+      const normalisedAlias = normaliseForMatch(alias);
+      if (!normalisedAlias) return false;
+      return normalisedText.includes(` ${normalisedAlias} `);
+    });
+    if (hasExplicitMatch) works.push(work.canonical_title);
+  }
+
+  return [...new Set(works)];
+}
+
+function extractBrahmsProgramme(text) {
+  if (!containsBrahms(text)) return "";
+  return extractCanonicalBrahmsWorksFromText(text).join(" / ");
+}
+
+function formatIsoDate(value) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  const m = String(value).match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})/);
+  if (!m) return "";
+  const fallbackParsed = new Date(`${m[1]} ${m[2]} ${m[3]} 12:00:00 UTC`);
+  return Number.isNaN(fallbackParsed.getTime()) ? "" : fallbackParsed.toISOString().slice(0, 10);
+}
+
+function toAbsoluteUrl(url, baseUrl) {
+  if (!url) return "";
+  try {
+    return new URL(url, baseUrl).toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function collectJsonLdNodes(node) {
+  if (!node) return [];
+  if (Array.isArray(node)) return node.flatMap((item) => collectJsonLdNodes(item));
+  if (typeof node !== "object") return [];
+  if (node["@graph"]) return collectJsonLdNodes(node["@graph"]);
+  return [node];
+}
+
+function isEventJsonLdNode(node) {
+  const nodeType = node["@type"];
+  if (Array.isArray(nodeType)) return nodeType.some((value) => String(value).toLowerCase() === "event");
+  return String(nodeType || "").toLowerCase() === "event";
+}
+
+function stringifyJsonValue(value) {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.map((item) => stringifyJsonValue(item)).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return [value.name, value.description, value.title, value.text, value.caption]
+      .map((item) => normaliseWhitespace(item))
+      .filter(Boolean)
+      .join(" ");
+  }
+  return normaliseWhitespace(String(value));
+}
+
+function extractBrittenPearsJsonLdEvents(html, baseUrl) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $("script[type='application/ld+json']").each((_, script) => {
+    const raw = $(script).contents().text();
+    if (!raw || !raw.trim()) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_) {
+      return;
+    }
+
+    const nodes = collectJsonLdNodes(parsed).filter((node) => typeof node === "object" && isEventJsonLdNode(node));
+    for (const node of nodes) {
+      const title = normaliseWhitespace(node.name || node.title || "");
+      const description = normaliseWhitespace(node.description || "");
+      const richText = [
+        title,
+        description,
+        stringifyJsonValue(node.about),
+        stringifyJsonValue(node.performer),
+        stringifyJsonValue(node.workPerformed),
+      ].join(" ");
+      if (!containsBrahms(richText)) continue;
+
+      const date = formatIsoDate(node.startDate || node.startDateTime || node.date);
+      const venue = normaliseWhitespace(
+        node.location?.name || node.location?.address?.name || node.organizer?.name || "Britten Pears Arts"
+      );
+      const url = toAbsoluteUrl(node.url || node["@id"], baseUrl);
+      const key = `${title}|${date}|${url}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      events.push({
+        title: title || "Britten Pears Arts event",
+        date,
+        venue: venue || "Britten Pears Arts",
+        source: "Britten Pears Arts",
+        programme: extractBrahmsProgramme(richText),
+        url,
+      });
+    }
+  });
+
+  return events;
+}
+
+function extractBrittenPearsCardEvents(html, baseUrl) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $("a[href*='/whats-on/']").each((_, link) => {
+    const href = $(link).attr("href") || "";
+    const url = toAbsoluteUrl(href, baseUrl);
+    if (!url) return;
+
+    const container = $(link).closest(
+      "article, li, div[class*='card'], div[class*='event'], div[class*='listing'], div[class*='result']"
+    ).first();
+    const context = container.length ? container : $(link).parent();
+
+    const title = normaliseWhitespace(
+      context.find("h1, h2, h3, h4").first().text() || $(link).text()
+    );
+    const description = normaliseWhitespace(context.find("p").map((_, p) => $(p).text()).get().join(" "));
+    const dateValue = normaliseWhitespace(
+      context.find("time[datetime]").first().attr("datetime")
+      || context.find("time").first().text()
+      || context.find("[class*='date']").first().text()
+    );
+    const combinedText = [title, description, context.text()].filter(Boolean).join(" ");
+    if (!containsBrahms(combinedText)) return;
+
+    const date = formatIsoDate(dateValue);
+    const venue = normaliseWhitespace(
+      context.find("[class*='venue'], [class*='location']").first().text() || "Britten Pears Arts"
+    );
+
+    const key = `${title}|${date}|${url}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    events.push({
+      title: title || "Britten Pears Arts event",
+      date,
+      venue: venue || "Britten Pears Arts",
+      source: "Britten Pears Arts",
+      programme: extractBrahmsProgramme(combinedText),
+      url,
+    });
+  });
+
+  return events;
+}
+
+function dedupeEvents(events) {
+  const seen = new Set();
+  return events.filter((event) => {
+    const key = `${event.title}|${event.date}|${event.url}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function fetchHtml(url) {
+  const response = await fetch(url, { headers: browserHeaders });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.status}`);
+  }
+  return response.text();
+}
+
+async function scrapeBrittenPearsWhatsOn(source) {
+  const listingUrl = source.homepage || "https://www.brittenpearsarts.org/whats-on";
+  const html = await fetchHtml(listingUrl);
+
+  const items = dedupeEvents([
+    ...extractBrittenPearsJsonLdEvents(html, listingUrl),
+    ...extractBrittenPearsCardEvents(html, listingUrl),
+  ])
+    .filter((item) => item.date ? isWithinNextMonth(item.date) : true)
+    .sort((a, b) => {
+      if (a.date && b.date) return a.date.localeCompare(b.date);
+      if (!a.date && b.date) return 1;
+      if (a.date && !b.date) return -1;
+      return a.title.localeCompare(b.title);
+    });
+
+  console.log(`Scraped ${items.length} Britten Pears Arts event(s)`);
+  return items;
+}
+
+async function scrapeSource(source) {
+  if (source.id === "britten-pears-arts-whats-on") {
+    return scrapeBrittenPearsWhatsOn(source);
+  }
+
+  return [];
+}
+
+async function main() {
+  const sources = JSON.parse(fs.readFileSync(sourcesPath, "utf8"));
+  const items = [];
+
+  for (const source of sources) {
+    try {
+      const sourceItems = await scrapeSource(source);
+      items.push(...sourceItems);
+    } catch (error) {
+      console.error(`Failed to scrape ${source.name}:`, error.message);
+    }
+  }
+
+  const output = {
+    generatedAt: new Date().toISOString(),
+    month: getNextMonthLabel(),
+    items: dedupeEvents(items),
+  };
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+  console.log(`Wrote ${output.items.length} items to ${outputPath}`);
+}
+
+module.exports = {
+  containsBrahms,
+  isWithinNextMonth,
+  getNextMonthDateRange,
+  canonicaliseBrahmsWorkTitle,
+  extractCanonicalBrahmsWorksFromText,
+  extractBrahmsProgramme,
+  formatIsoDate,
+  extractBrittenPearsJsonLdEvents,
+  extractBrittenPearsCardEvents,
+  dedupeEvents,
+};
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

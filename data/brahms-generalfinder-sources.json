@@ -1,0 +1,11 @@
+[
+  {
+    "id": "britten-pears-arts-whats-on",
+    "name": "Britten Pears Arts What's On",
+    "homepage": "https://www.brittenpearsarts.org/whats-on",
+    "type": "venue-listing",
+    "priority": 1,
+    "status": "active",
+    "notes": "Primary source for the brahms-generalfinder flow."
+  }
+]
