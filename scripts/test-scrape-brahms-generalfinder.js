@@ -13,6 +13,7 @@ const {
   extractBrittenPearsCardEvents,
   extractBrittenPearsListingPageUrls,
   extractBrittenPearsEventUrls,
+  collectBrittenPearsListingDiagnostics,
   extractBrittenPearsEventFromDetailPage,
   dedupeEvents,
 } = require("./scrape-brahms-generalfinder");
@@ -175,6 +176,38 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/events/cello-sonata-recital").length === 1);
   assert("ignores /whats-on URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/")));
   assert("ignores non-slug /events hubs", !eventUrlSet.has("https://www.brittenpearsarts.org/events"));
+}
+
+console.log("\ncollectBrittenPearsListingDiagnostics");
+{
+  const html = `<html><body>
+    <ul>
+      <li class="ais-Hits-item o-whats-on-grid__main__event">
+        <a href="/events/nicolas-altstaedt-and-friends">More info</a>
+      </li>
+    </ul>
+    <a href="/whats-on?page=2&filter=type%3Aperformances">2</a>
+    <a href="/whats-on/page/3">3</a>
+    <a href="/about">About</a>
+    <link rel="next" href="/whats-on?page=2&filter=type%3Aperformances">
+  </body></html>`;
+
+  const diagnostics = collectBrittenPearsListingDiagnostics(
+    html,
+    "https://www.brittenpearsarts.org/whats-on",
+    { hrefSampleLimit: 3 }
+  );
+
+  assert("reports raw HTML length", diagnostics.rawHtmlLength === html.length);
+  assert("detects ais-Hits-item marker", diagnostics.markerPresence["ais-Hits-item"] === true);
+  assert("detects /events/ marker", diagnostics.markerPresence["/events/"] === true);
+  assert("detects pagination marker", diagnostics.markerPresence["pagination /whats-on?page="] === true);
+  assert("counts total hrefs", diagnostics.totalHrefCount === 4);
+  assert("counts /events/ hrefs", diagnostics.eventHrefCount === 1);
+  assert("counts pagination-like hrefs", diagnostics.paginationHrefCount === 2);
+  assert("captures sample hrefs up to limit", diagnostics.hrefSample.length === 3);
+  assert("reports canonical listing-page count", diagnostics.canonicalListingPageCount === 3);
+  assert("reports canonical event URL count", diagnostics.canonicalEventUrlCount === 1);
 }
 
 console.log("\nextractBrittenPearsEventFromDetailPage");

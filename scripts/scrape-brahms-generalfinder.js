@@ -6,6 +6,7 @@ const brahmsWorks = require("./data/brahms-works.json");
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-generalfinder-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-generalfinder-performances.json");
 const DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES = 200;
+const DEFAULT_LISTING_HREF_SAMPLE_LIMIT = 25;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -406,6 +407,60 @@ function extractBrittenPearsEventUrls(html, listingBaseUrl) {
   return [...events];
 }
 
+function collectBrittenPearsListingDiagnostics(html, listingBaseUrl, options = {}) {
+  const sampleLimit = Number.isInteger(Number(options.hrefSampleLimit)) && Number(options.hrefSampleLimit) > 0
+    ? Number(options.hrefSampleLimit)
+    : DEFAULT_LISTING_HREF_SAMPLE_LIMIT;
+  const $ = cheerio.load(html);
+  const hrefs = $("a[href]").map((_, link) => normaliseWhitespace($(link).attr("href") || "")).get().filter(Boolean);
+  const eventHrefs = hrefs.filter((href) => href.toLowerCase().includes("/events/"));
+  const paginationHrefs = hrefs.filter((href) => {
+    const lower = href.toLowerCase();
+    return /\/whats-on\/page\/\d+/.test(lower) || /\/whats-on\?[^#\s]*\bpage=\d+/.test(lower);
+  });
+
+  return {
+    rawHtmlLength: html.length,
+    markerPresence: {
+      "ais-Hits-item": html.includes("ais-Hits-item"),
+      "c-media--event": html.includes("c-media--event"),
+      "/events/": html.includes("/events/"),
+      "pagination /whats-on?page=": html.includes("/whats-on?page="),
+      "pagination /whats-on/page/": html.includes("/whats-on/page/"),
+      "pagination rel=next": /rel=["']next["']/i.test(html),
+    },
+    totalHrefCount: hrefs.length,
+    eventHrefCount: eventHrefs.length,
+    paginationHrefCount: paginationHrefs.length,
+    hrefSample: hrefs.slice(0, sampleLimit),
+    canonicalListingPageCount: extractBrittenPearsListingPageUrls(html, listingBaseUrl).length,
+    canonicalEventUrlCount: extractBrittenPearsEventUrls(html, listingBaseUrl).length,
+  };
+}
+
+function maybeWriteBrittenPearsListingHtmlDump(html, pageUrl, listingPageIndex) {
+  const dumpDirectory = process.env.BRITTEN_PEARS_LISTING_HTML_DUMP_DIR;
+  if (!dumpDirectory) return;
+
+  const safeName = (() => {
+    try {
+      const parsed = new URL(pageUrl);
+      const pathPart = normalisePathname(parsed.pathname).replace(/^\//, "") || "root";
+      const queryPart = parsed.search ? parsed.search.slice(1).replace(/[^a-z0-9]+/gi, "-") : "";
+      const combined = [pathPart, queryPart].filter(Boolean).join("-");
+      return combined.toLowerCase().replace(/-+/g, "-").slice(0, 100) || "listing";
+    } catch (_) {
+      return "listing";
+    }
+  })();
+
+  fs.mkdirSync(dumpDirectory, { recursive: true });
+  const filename = `${String(listingPageIndex + 1).padStart(3, "0")}-${safeName}.html`;
+  const outputFile = path.join(dumpDirectory, filename);
+  fs.writeFileSync(outputFile, html, "utf8");
+  console.log(`    wrote raw listing HTML dump: ${outputFile}`);
+}
+
 function extractBrittenPearsMetaListRows($) {
   const rows = [];
 
@@ -521,6 +576,26 @@ async function scrapeBrittenPearsWhatsOn(source) {
 
     console.log(`  [listing] ${pageUrl}`);
     const html = await fetchHtml(pageUrl);
+    const listingDiagnostics = collectBrittenPearsListingDiagnostics(html, listingUrl);
+    console.log(`    raw html length: ${listingDiagnostics.rawHtmlLength}`);
+    console.log(
+      `    markers: ${
+        Object.entries(listingDiagnostics.markerPresence)
+          .map(([marker, present]) => `${marker}=${present ? "yes" : "no"}`)
+          .join(", ")
+      }`
+    );
+    console.log(
+      `    links: total a[href]=${listingDiagnostics.totalHrefCount}, /events/ links=${listingDiagnostics.eventHrefCount}, pagination-like links=${listingDiagnostics.paginationHrefCount}`
+    );
+    console.log(
+      `    canonicalized: listing pages=${listingDiagnostics.canonicalListingPageCount}, event URLs=${listingDiagnostics.canonicalEventUrlCount}`
+    );
+    const sampleHrefs = listingDiagnostics.hrefSample.length
+      ? listingDiagnostics.hrefSample.join(" | ")
+      : "(none)";
+    console.log(`    href sample (${listingDiagnostics.hrefSample.length}): ${sampleHrefs}`);
+    maybeWriteBrittenPearsListingHtmlDump(html, pageUrl, visitedPages.size - 1);
     for (const discoveredPageUrl of extractBrittenPearsListingPageUrls(html, listingUrl)) {
       if (!visitedPages.has(discoveredPageUrl)) {
         pendingPages.push(discoveredPageUrl);
@@ -629,6 +704,7 @@ module.exports = {
   extractBrittenPearsCardEvents,
   extractBrittenPearsListingPageUrls,
   extractBrittenPearsEventUrls,
+  collectBrittenPearsListingDiagnostics,
   extractBrittenPearsEventFromDetailPage,
   dedupeEvents,
 };
