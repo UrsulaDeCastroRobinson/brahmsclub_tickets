@@ -50,6 +50,23 @@ function isWithinSixMonthRange(dateString) {
   return parsed >= start && parsed <= end;
 }
 
+function getTargetRangeEndDateString() {
+  return getSixMonthDateRange().end.toISOString().slice(0, 10);
+}
+
+function getLatestEventDate(urls) {
+  let latest = "";
+
+  for (const url of urls) {
+    const date = parseEventDateFromUrl(url);
+    if (date && (!latest || date > latest)) {
+      latest = date;
+    }
+  }
+
+  return latest;
+}
+
 // ---------------------------------------------------------------------------
 // Cheerio-based HTML parsing helpers
 // ---------------------------------------------------------------------------
@@ -351,11 +368,12 @@ async function collectWigmoreEventLinksWithBrowser() {
       timeout: 30000,
     });
 
-    // Scroll repeatedly to trigger lazy loading; be patient because the Wigmore
-    // Hall listing page can take a while to append new results after scrolling.
-    const MAX_SCROLLS = 80;
-    const STABLE_ROUNDS_LIMIT = 8;
-    const SCROLL_SETTLE_MS = 1500;
+    // Scroll repeatedly to trigger lazy loading; continue until we either hit
+    // the target end date in discovered URLs or a generous upper bound.
+    const MAX_SCROLLS = 200;
+    const STABLE_ROUNDS_LIMIT = 20;
+    const SCROLL_SETTLE_MS = 2000;
+    const targetEndDate = getTargetRangeEndDateString();
     let previousCount = 0;
     let stableRounds = 0;
 
@@ -363,23 +381,31 @@ async function collectWigmoreEventLinksWithBrowser() {
       const links = await extractRenderedEventLinks(page);
       links.forEach((l) => eventLinkSet.add(l));
 
+      const latestDiscoveredDate = getLatestEventDate(eventLinkSet);
+      const reachedTargetEnd = latestDiscoveredDate && latestDiscoveredDate >= targetEndDate;
+
       if (eventLinkSet.size === previousCount) {
         stableRounds++;
-        if (stableRounds >= STABLE_ROUNDS_LIMIT) break;
+        if (stableRounds >= STABLE_ROUNDS_LIMIT && reachedTargetEnd) break;
       } else {
         stableRounds = 0;
         previousCount = eventLinkSet.size;
       }
 
+      if (reachedTargetEnd && stableRounds >= 5) {
+        break;
+      }
+
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await page.waitForTimeout(SCROLL_SETTLE_MS);
-      await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
 
     const finalLinks = await extractRenderedEventLinks(page);
     finalLinks.forEach((l) => eventLinkSet.add(l));
 
-    console.log(`Browser discovery: found ${eventLinkSet.size} total Wigmore event link(s)`);
+    const latestDiscoveredDate = getLatestEventDate(eventLinkSet);
+    console.log(`Browser discovery: found ${eventLinkSet.size} total Wigmore event link(s) through ${latestDiscoveredDate || "unknown date"}`);
   } finally {
     await browser.close();
   }
@@ -500,6 +526,8 @@ module.exports = {
   containsBrahms,
   isWithinSixMonthRange,
   getSixMonthDateRange,
+  getTargetRangeEndDateString,
+  getLatestEventDate,
   canonicaliseBrahmsWorkTitle,
   extractWigmoreRepertoireProgramme,
   extractWigmoreEvent,
