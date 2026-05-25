@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import ResponsiveContainer from "../components/ResponsiveContainer";
-import brahmsWorks from "../scripts/data/brahms-works.json";
+import { BRAHMS_LIBRARY_PROGRAMMES } from "../lib/brahms-library-programmes";
 
 const FEEDS = [
   { label: "Brahms Finder", url: "/data/brahms-performances.json" },
@@ -10,7 +10,7 @@ const FEEDS = [
 
 const INITIAL_DATA = { generatedAt: "", month: "", items: [] };
 const LIBRARY_PROGRAMMES = new Set(
-  brahmsWorks.map((work) => String(work?.canonical_title || "").trim().toLowerCase()).filter(Boolean)
+  BRAHMS_LIBRARY_PROGRAMMES.map((title) => String(title || "").trim().toLowerCase()).filter(Boolean)
 );
 
 function splitProgramme(programme = "") {
