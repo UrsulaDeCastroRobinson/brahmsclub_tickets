@@ -7,6 +7,7 @@ const sourcesPath = path.join(__dirname, "..", "data", "brahms-generalfinder-sou
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-generalfinder-performances.json");
 const DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES = 200;
 const DEFAULT_LISTING_HREF_SAMPLE_LIMIT = 25;
+const MAX_LISTING_DUMP_FILENAME_SEGMENT_LENGTH = 100;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -408,8 +409,9 @@ function extractBrittenPearsEventUrls(html, listingBaseUrl) {
 }
 
 function collectBrittenPearsListingDiagnostics(html, listingBaseUrl, options = {}) {
-  const sampleLimit = Number.isInteger(Number(options.hrefSampleLimit)) && Number(options.hrefSampleLimit) > 0
-    ? Number(options.hrefSampleLimit)
+  const configuredSampleLimit = Number(options.hrefSampleLimit);
+  const sampleLimit = Number.isFinite(configuredSampleLimit) && configuredSampleLimit > 0
+    ? Math.floor(configuredSampleLimit)
     : DEFAULT_LISTING_HREF_SAMPLE_LIMIT;
   const $ = cheerio.load(html);
   const hrefs = $("a[href]").map((_, link) => normaliseWhitespace($(link).attr("href") || "")).get().filter(Boolean);
@@ -438,7 +440,7 @@ function collectBrittenPearsListingDiagnostics(html, listingBaseUrl, options = {
   };
 }
 
-function maybeWriteBrittenPearsListingHtmlDump(html, pageUrl, listingPageIndex) {
+function maybeWriteBrittenPearsListingHtmlDump(html, pageUrl, pageIndex) {
   const dumpDirectory = process.env.BRITTEN_PEARS_LISTING_HTML_DUMP_DIR;
   if (!dumpDirectory) return;
 
@@ -448,14 +450,18 @@ function maybeWriteBrittenPearsListingHtmlDump(html, pageUrl, listingPageIndex) 
       const pathPart = normalisePathname(parsed.pathname).replace(/^\//, "") || "root";
       const queryPart = parsed.search ? parsed.search.slice(1).replace(/[^a-z0-9]+/gi, "-") : "";
       const combined = [pathPart, queryPart].filter(Boolean).join("-");
-      return combined.toLowerCase().replace(/-+/g, "-").slice(0, 100) || "listing";
+      return combined
+        .toLowerCase()
+        .replace(/-+/g, "-")
+        .slice(0, MAX_LISTING_DUMP_FILENAME_SEGMENT_LENGTH)
+        .replace(/^-|-$/g, "") || "listing";
     } catch (_) {
       return "listing";
     }
   })();
 
   fs.mkdirSync(dumpDirectory, { recursive: true });
-  const filename = `${String(listingPageIndex + 1).padStart(3, "0")}-${safeName}.html`;
+  const filename = `${(pageIndex + 1).toString().padStart(3, "0")}-${safeName}.html`;
   const outputFile = path.join(dumpDirectory, filename);
   fs.writeFileSync(outputFile, html, "utf8");
   console.log(`    wrote raw listing HTML dump: ${outputFile}`);
