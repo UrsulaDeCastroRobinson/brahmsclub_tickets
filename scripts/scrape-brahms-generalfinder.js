@@ -5,6 +5,7 @@ const brahmsWorks = require("./data/brahms-works.json");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-generalfinder-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-generalfinder-performances.json");
+const DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES = 200;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -456,7 +457,10 @@ async function scrapeBrittenPearsWhatsOn(source) {
   const pendingPages = [listingUrl];
   const visitedPages = new Set();
   const discoveredEventUrls = new Set();
-  const maxListingPages = 50;
+  const configuredLimit = Number(source.maxPaginationPages);
+  const maxListingPages = Number.isFinite(configuredLimit) && configuredLimit > 0
+    ? Math.floor(configuredLimit)
+    : DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES;
 
   while (pendingPages.length && visitedPages.size < maxListingPages) {
     const pageUrl = pendingPages.shift();
