@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const cheerio = require("cheerio");
+const brahmsWorks = require("./data/brahms-works.json");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
@@ -170,6 +171,83 @@ function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normaliseForMatch(value) {
+  return normaliseWhitespace(value || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const brahmsAliasMap = new Map(
+  brahmsWorks.flatMap((work) =>
+    [work.canonical_title, ...(work.aliases || [])].map((alias) => [normaliseForMatch(alias), work.canonical_title])
+  )
+);
+
+function canonicaliseBrahmsWorkTitle(title) {
+  const normalisedTitle = normaliseForMatch(title);
+  if (!normalisedTitle) return "";
+
+  if (brahmsAliasMap.has(normalisedTitle)) {
+    return brahmsAliasMap.get(normalisedTitle);
+  }
+
+  const candidates = brahmsWorks
+    .map((work) => ({
+      work,
+      matchesRequired: (work.required_terms || []).every((term) => normalisedTitle.includes(normaliseForMatch(term))),
+      optionalMatches: (work.optional_terms || []).filter((term) => normalisedTitle.includes(normaliseForMatch(term))).length,
+    }))
+    .filter((candidate) => candidate.matchesRequired);
+
+  if (!candidates.length) return "";
+
+  const bestOptionalMatches = Math.max(...candidates.map((candidate) => candidate.optionalMatches));
+  if (bestOptionalMatches === 0) return "";
+
+  const bestCandidates = candidates.filter((candidate) => candidate.optionalMatches === bestOptionalMatches);
+  return bestCandidates.length === 1 ? bestCandidates[0].work.canonical_title : "";
+}
+
+function isBrahmsRepertoireBlock($, block) {
+  const hasBrahmsComposerLink = $(block)
+    .find("a[href]")
+    .toArray()
+    .some((link) => /\/artists\/johannes-brahms\/?$/i.test($(link).attr("href") || ""));
+
+  if (hasBrahmsComposerLink) return true;
+
+  const composerText = [
+    $(block).find("[class*='composer']").text(),
+    $(block).find('a[href*="/artists/"]').map((_, link) => $(link).text()).get().join(" "),
+  ].join(" ");
+
+  return containsBrahms(composerText);
+}
+
+function extractWigmoreRepertoireProgramme($) {
+  const titles = [];
+
+  $("article.repertoire-work-item, div.repertoire-work-item").each((_, block) => {
+    if (!isBrahmsRepertoireBlock($, block)) return;
+
+    const blockTitles = $(block)
+      .find(".repertoire-list .rich-text.inline.bold, .repertoire-list .rich-text.bold, .repertoire-list .bold")
+      .map((_, node) => normaliseWhitespace($(node).text()))
+      .get()
+      .filter(Boolean);
+
+    for (const rawTitle of [...new Set(blockTitles)]) {
+      titles.push(canonicaliseBrahmsWorkTitle(rawTitle) || rawTitle);
+    }
+  });
+
+  return [...new Set(titles)].join(" / ");
+}
+
 // ---------------------------------------------------------------------------
 // Wigmore Hall event page extraction
 // ---------------------------------------------------------------------------
@@ -205,9 +283,7 @@ function extractWigmoreEvent(html, url) {
   }
 
   const resolvedTitle = title || "Wigmore Hall event";
-  const resolvedProgramme = normaliseWhitespace(
-    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
-  );
+  const resolvedProgramme = extractWigmoreRepertoireProgramme($);
 
   return {
     title: resolvedTitle,
@@ -426,6 +502,8 @@ module.exports = {
   containsBrahms,
   isWithinNextMonth,
   getNextMonthDateRange,
+  canonicaliseBrahmsWorkTitle,
+  extractWigmoreRepertoireProgramme,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
 };

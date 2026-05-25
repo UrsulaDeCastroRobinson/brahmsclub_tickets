@@ -13,6 +13,7 @@ const {
   containsBrahms,
   isWithinNextMonth,
   getNextMonthDateRange,
+  extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
 } = require("./scrape-brahms");
 
@@ -114,6 +115,68 @@ console.log("\ncontainsBrahms");
   assert("matches brahms (lowercase)", containsBrahms("featuring brahms"));
   assert("matches BRAHMS (uppercase)", containsBrahms("BRAHMS Piano Quartet"));
   assert("does not match partial word", !containsBrahms("Abrahmson conducts"));
+}
+
+console.log("\nextractWigmoreEvent");
+
+{
+  const singleWorkHtml = `<html><body>
+    <h1>Brahms recital</h1>
+    <article class="repertoire-items repertoire-work-item">
+      <div class="repertoire-composer">
+        <a href="/artists/johannes-brahms">Johannes Brahms</a>
+      </div>
+      <div class="repertoire-list">
+        <div class="rich-text inline bold">Violin Sonata No. 3 in D minor Op. 108</div>
+      </div>
+    </article>
+  </body></html>`;
+  const singleWorkEvent = extractWigmoreEvent(singleWorkHtml, "https://www.wigmore-hall.org.uk/whats-on/202606241300");
+  assert("extracts a single Brahms repertoire work", singleWorkEvent.programme === "Violin Sonata No. 3 in D minor, Op. 108");
+
+  const multipleWorksHtml = `<html><body>
+    <h1>Brahms chamber music</h1>
+    <article class="repertoire-work-item">
+      <div class="repertoire-composer"><a href="/artists/johannes-brahms">Johannes Brahms</a></div>
+      <div class="repertoire-list">
+        <div class="rich-text inline bold">Cello Sonata No. 1 in E minor Op. 38</div>
+      </div>
+    </article>
+    <article class="repertoire-work-item">
+      <div class="repertoire-composer"><a href="/artists/johannes-brahms">Johannes Brahms</a></div>
+      <div class="repertoire-list">
+        <div class="rich-text inline bold">Piano Quintet in F minor, Op. 34</div>
+      </div>
+    </article>
+  </body></html>`;
+  const multipleWorksEvent = extractWigmoreEvent(multipleWorksHtml, "https://www.wigmore-hall.org.uk/whats-on/202606251930");
+  assert(
+    "joins multiple Brahms repertoire works with slashes",
+    multipleWorksEvent.programme === "Cello Sonata No. 1 in E minor, Op. 38 / Piano Quintet in F minor, Op. 34"
+  );
+
+  const uncertainWorkHtml = `<html><body>
+    <h1>Brahms evening</h1>
+    <article class="repertoire-work-item">
+      <div class="repertoire-composer"><a href="/artists/johannes-brahms">Johannes Brahms</a></div>
+      <div class="repertoire-list">
+        <div class="rich-text inline bold">Violin Sonata No. 3</div>
+      </div>
+    </article>
+  </body></html>`;
+  const uncertainWorkEvent = extractWigmoreEvent(uncertainWorkHtml, "https://www.wigmore-hall.org.uk/whats-on/202606261930");
+  assert("falls back to the raw repertoire title when canonicalization is uncertain", uncertainWorkEvent.programme === "Violin Sonata No. 3");
+
+  const noRepertoireHtml = `<html><body>
+    <h1>Brahms recital</h1>
+    <h3>Programme</h3>
+    <p>Violin Sonata No. 1 in G major, Op. 78</p>
+    <h3>Overview</h3>
+    <p>Brahms features in tonight's recital.</p>
+  </body></html>`;
+  const noRepertoireEvent = extractWigmoreEvent(noRepertoireHtml, "https://www.wigmore-hall.org.uk/whats-on/202606271930");
+  assert("retains Brahms events when repertoire programme extraction is absent", noRepertoireEvent !== null);
+  assert("ignores non-repertoire programme prose when deriving programme", noRepertoireEvent.programme === "");
 }
 
 // ---------------------------------------------------------------------------
