@@ -139,10 +139,13 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   const html = `<html><body>
     <a href="/whats-on?page=2">Next</a>
     <a href="/whats-on/page/3">Page 3</a>
+    <a href="/whats-on?page=2&view=grid">Invalid page variant with extra params</a>
+    <a href="/whats-on/page/2?view=grid">Invalid path variant with query params</a>
+    <a href="/whats-on?page=abc">Invalid non-numeric page</a>
+    <a href="/whats-on/page/two">Invalid non-numeric path page</a>
     <a href="/whats-on/cello-sonata-recital">Cello recital</a>
     <a href="/whats-on/cello-sonata-recital#tickets">Cello recital duplicate with hash</a>
     <a href="/whats-on/chamber-evening">Chamber evening</a>
-    <a href="/whats-on/page/2?view=grid">Listing duplicate</a>
     <a href="/news/article">News</a>
   </body></html>`;
   const baseUrl = "https://www.brittenpearsarts.org/whats-on";
@@ -152,9 +155,11 @@ console.log("\nextractBrittenPearsListingPageUrls and extractBrittenPearsEventUr
   const listingPageSet = new Set(listingPages);
   const eventUrlSet = new Set(eventUrls);
 
-  assert("keeps paginated listing pages", listingPageSet.has("https://www.brittenpearsarts.org/whats-on?page=2"));
+  assert("canonicalises query pagination URL to /page/N form", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/2"));
   assert("keeps /page/N listing pages", listingPageSet.has("https://www.brittenpearsarts.org/whats-on/page/3"));
-  assert("deduplicates listing pages with hashes", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/page/2?view=grid").length === 1);
+  assert("does not keep non-canonical listing URL variants", !listingPages.includes("https://www.brittenpearsarts.org/whats-on?page=2&view=grid"));
+  assert("rejects non-numeric listing page variants", !listingPages.some((url) => url.includes("page=abc") || url.includes("/page/two")));
+  assert("deduplicates canonical listing pages", listingPages.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/page/2").length === 1);
   assert("collects event detail URLs", eventUrlSet.has("https://www.brittenpearsarts.org/whats-on/cello-sonata-recital"));
   assert("deduplicates repeated event URLs", eventUrls.filter((url) => url === "https://www.brittenpearsarts.org/whats-on/cello-sonata-recital").length === 1);
   assert("ignores listing page URLs when collecting events", !eventUrls.some((url) => url.includes("/whats-on/page/")));

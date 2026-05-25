@@ -64,6 +64,10 @@ function normaliseForMatch(value) {
     .trim();
 }
 
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const brahmsAliasMap = new Map(
   brahmsWorks.flatMap((work) =>
     [work.canonical_title, ...(work.aliases || [])].map((alias) => [normaliseForMatch(alias), work.canonical_title])
@@ -299,27 +303,60 @@ function isBrittenPearsListingPage(url, listingBaseUrl) {
     const listingPath = normalisePathname(listingBase.pathname);
 
     if (parsed.origin !== listingBase.origin) return false;
-    if (pathname === listingPath) return true;
-    if (pathname.startsWith(`${listingPath}/page/`)) return true;
-    if (pathname === `${listingPath}/page`) return true;
-    return parsed.searchParams.has("page") && pathname === listingPath;
+    if (pathname === listingPath) {
+      if (!parsed.search) return true;
+      if ([...parsed.searchParams.keys()].length !== 1) return false;
+      const pageParam = parsed.searchParams.get("page");
+      return Number.isInteger(Number(pageParam)) && Number(pageParam) > 1;
+    }
+
+    const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
+    return Boolean(match && Number(match[1]) > 1 && !parsed.search);
   } catch (_) {
     return false;
+  }
+}
+
+function canonicaliseBrittenPearsListingPageUrl(url, listingBaseUrl) {
+  try {
+    const parsed = new URL(url, listingBaseUrl);
+    if (!isBrittenPearsListingPage(parsed.toString(), listingBaseUrl)) return "";
+
+    const listingBase = new URL(listingBaseUrl);
+    const listingPath = normalisePathname(listingBase.pathname);
+    const pathname = normalisePathname(parsed.pathname);
+    let pageNumber = 1;
+
+    if (pathname === listingPath && parsed.searchParams.has("page")) {
+      pageNumber = Number(parsed.searchParams.get("page"));
+    } else {
+      const match = pathname.match(new RegExp(`^${escapeRegex(listingPath)}/page/(\\d+)$`));
+      if (match) pageNumber = Number(match[1]);
+    }
+
+    const canonicalUrl = new URL(listingBaseUrl);
+    canonicalUrl.hash = "";
+    canonicalUrl.search = "";
+    canonicalUrl.pathname = pageNumber > 1
+      ? `${listingPath}/page/${pageNumber}`
+      : listingPath;
+    return canonicalUrl.toString();
+  } catch (_) {
+    return "";
   }
 }
 
 function extractBrittenPearsListingPageUrls(html, listingBaseUrl) {
   const $ = cheerio.load(html);
   const pages = new Set();
-  const baseListingUrl = stripUrlHash(toAbsoluteUrl(listingBaseUrl, listingBaseUrl));
+  const baseListingUrl = canonicaliseBrittenPearsListingPageUrl(listingBaseUrl, listingBaseUrl);
   if (baseListingUrl) pages.add(baseListingUrl);
 
   $("a[href], link[rel='next'][href]").each((_, element) => {
     const href = $(element).attr("href") || "";
-    const absoluteUrl = stripUrlHash(toAbsoluteUrl(href, listingBaseUrl));
-    if (!absoluteUrl) return;
-    if (!isBrittenPearsListingPage(absoluteUrl, listingBaseUrl)) return;
-    pages.add(absoluteUrl);
+    const canonicalUrl = canonicaliseBrittenPearsListingPageUrl(href, listingBaseUrl);
+    if (!canonicalUrl) return;
+    pages.add(canonicalUrl);
   });
 
   return [...pages];
