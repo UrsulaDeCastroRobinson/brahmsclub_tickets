@@ -402,7 +402,7 @@ function extractBrittenPearsMetaListRows($) {
   $("dl.c-meta__list").each((_, list) => {
     const items = $(list).find(".c-meta__item");
     if (items.length) {
-      items.each((__, item) => {
+      items.each((_, item) => {
         const key = normaliseWhitespace($(item).find("dt").first().text());
         const value = normaliseWhitespace($(item).find("dd").first().text());
         const row = normaliseWhitespace([key, value].filter(Boolean).join(" "));
@@ -412,7 +412,7 @@ function extractBrittenPearsMetaListRows($) {
     }
 
     const terms = $(list).find("dt");
-    terms.each((__, term) => {
+    terms.each((_, term) => {
       const key = normaliseWhitespace($(term).text());
       const value = normaliseWhitespace($(term).next("dd").first().text());
       const row = normaliseWhitespace([key, value].filter(Boolean).join(" "));
