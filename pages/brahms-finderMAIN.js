@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import ResponsiveContainer from "../components/ResponsiveContainer";
+import { BRAHMS_LIBRARY_PROGRAMMES } from "../lib/brahms-library-programmes";
 
 const FEEDS = [
   { label: "Brahms Finder", url: "/data/brahms-performances.json" },
@@ -8,26 +9,41 @@ const FEEDS = [
 ];
 
 const INITIAL_DATA = { generatedAt: "", month: "", items: [] };
+const LIBRARY_PROGRAMMES = new Set(
+  BRAHMS_LIBRARY_PROGRAMMES.map((title) => String(title || "").trim().toLowerCase()).filter(Boolean)
+);
+
+function splitProgramme(programme = "") {
+  return String(programme)
+    .split("/")
+    .map((work) => work.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 function normaliseItem(item = {}) {
   return {
     title: item.title || "",
     date: item.date || "",
     venue: item.venue || "",
-    source: item.source || "",
     programme: item.programme || "",
     url: item.url || "",
   };
 }
 
 function buildItemKey(item) {
-  return [item.source, item.url, item.title, item.date]
+  return [item.url, item.title, item.date]
     .map((value) => String(value || "").trim().toLowerCase())
     .join("|");
 }
 
 function hasRenderableContent(item) {
-  return Boolean(item.title || item.date || item.venue || item.source || item.programme || item.url);
+  return Boolean(item.title || item.date || item.venue || item.programme || item.url);
+}
+
+function isInLibrary(item) {
+  const programmeWorks = splitProgramme(item.programme);
+  if (programmeWorks.length === 0) return false;
+  return programmeWorks.every((work) => LIBRARY_PROGRAMMES.has(work));
 }
 
 function parseTimestamp(value) {
@@ -46,6 +62,7 @@ function aggregateFeedPayloads(payloads) {
     items.forEach((rawItem) => {
       const item = normaliseItem(rawItem);
       if (!hasRenderableContent(item)) return;
+      if (!isInLibrary(item)) return;
       const key = buildItemKey(item);
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
@@ -124,10 +141,7 @@ export default function BrahmsFinderMain() {
     <ResponsiveContainer>
       <main className="page page--brahms-finder">
         <section className="container">
-          <h1 className="club-title">Brahms Finder MAIN</h1>
-          <p className="club-description">
-            A combined feed of upcoming performances from all configured Brahms finder sources.
-          </p>
+          <h1 className="club-title">Brahms Chamber Music Listings (excludes Brahms Club)</h1>
 
           <Link className="back-link" href="/">Back to Home</Link>
 
@@ -144,9 +158,6 @@ export default function BrahmsFinderMain() {
                 </div>
               )}
 
-              <p><strong>Month:</strong> {data.month || "Not available yet"}</p>
-              <p><strong>Last updated:</strong> {data.generatedAt || "Not available yet"}</p>
-
               {data.items.length === 0 ? (
                 <p>No performances found yet.</p>
               ) : (
@@ -156,7 +167,6 @@ export default function BrahmsFinderMain() {
                       <h2>{item.title}</h2>
                       <p><strong>Date:</strong> {item.date}</p>
                       <p><strong>Venue:</strong> {item.venue}</p>
-                      <p><strong>Source:</strong> {item.source}</p>
                       <p><strong>Programme:</strong> {item.programme}</p>
                       {item.url && (
                         <p>
