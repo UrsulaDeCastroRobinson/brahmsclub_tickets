@@ -526,7 +526,7 @@ function extractWigmoreEvent(html, url) {
     extractMetaContent($, "name", "description"),
     extractMetaContent($, "property", "og:description"),
   ].filter(Boolean).join(" "));
-  const bodyText = extractBodyText(cheerio.load(html));
+  const bodyText = extractBodyText($);
   const programmeOnlyText = [
     programme,
     ...(structuredProgrammeItems || []).flat(),

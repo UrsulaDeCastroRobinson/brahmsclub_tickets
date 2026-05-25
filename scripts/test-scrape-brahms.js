@@ -274,6 +274,8 @@ console.log("\nextractWigmoreEvent");
     "meta description Brahms mention without Programme section is retained",
     event !== null
   );
+  // Retained by broad page Brahms signals, but programme-specific sources have
+  // no Brahms work match, so fallback should stay the generic Brahms label.
   assert(
     "meta description text is not used as direct programme source",
     event && event.programme === "Brahms programme"
@@ -440,6 +442,8 @@ console.log("\nextractWigmoreEvent");
     "overview/meta Brahms mention without Programme Brahms evidence is retained",
     event !== null
   );
+  // Retained by broad page Brahms signals; programme section is non-Brahms, so
+  // overview/meta text should not become resolved programme content.
   assert(
     "overview/meta fallback retention does not treat overview as programme",
     event && event.programme === "Brahms programme"
