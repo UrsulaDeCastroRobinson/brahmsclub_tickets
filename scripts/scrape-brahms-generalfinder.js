@@ -459,8 +459,8 @@ async function scrapeBrittenPearsWhatsOn(source) {
   const visitedPages = new Set();
   const discoveredEventUrls = new Set();
   const configuredLimit = Number(source.maxPaginationPages);
-  const maxListingPages = Number.isFinite(configuredLimit) && configuredLimit > 0
-    ? Math.floor(configuredLimit)
+  const maxListingPages = Number.isInteger(configuredLimit) && configuredLimit > 0
+    ? configuredLimit
     : DEFAULT_BRITTEN_PEARS_MAX_PAGINATION_PAGES;
 
   while (nextPageIndex < pendingPages.length && visitedPages.size < maxListingPages) {
