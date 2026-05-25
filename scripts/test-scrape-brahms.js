@@ -11,6 +11,8 @@ const {
   extractSection,
   parseEventDateFromUrl,
   containsBrahms,
+  isWithinNextMonth,
+  getNextMonthDateRange,
   collectWigmoreEventLinksStatic,
 } = require("./scrape-brahms");
 
@@ -115,6 +117,55 @@ console.log("\ncontainsBrahms");
 }
 
 // ---------------------------------------------------------------------------
+// isWithinNextMonth (date-range helper)
+// ---------------------------------------------------------------------------
+
+console.log("\nisWithinNextMonth");
+
+{
+  const scrape = require("./scrape-brahms");
+  const now = new Date();
+
+  // Today's date should be within the range
+  const todayStr = [
+    now.getUTCFullYear(),
+    String(now.getUTCMonth() + 1).padStart(2, "0"),
+    String(now.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  assert("isWithinNextMonth includes today", scrape.isWithinNextMonth(todayStr));
+
+  // A date in the next calendar month should be within the range
+  const nextMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 15));
+  const nextMonthStr = [
+    nextMonthDate.getUTCFullYear(),
+    String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0"),
+    String(nextMonthDate.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  assert("isWithinNextMonth includes a date in next calendar month", scrape.isWithinNextMonth(nextMonthStr));
+
+  // The last day of next month should be within the range
+  const { end } = scrape.getNextMonthDateRange();
+  const endStr = [
+    end.getUTCFullYear(),
+    String(end.getUTCMonth() + 1).padStart(2, "0"),
+    String(end.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  assert("isWithinNextMonth includes the last day of next month", scrape.isWithinNextMonth(endStr));
+
+  // A date from two months ahead should be out of range
+  const twoMonthsAhead = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1));
+  const twoMonthsStr = [
+    twoMonthsAhead.getUTCFullYear(),
+    String(twoMonthsAhead.getUTCMonth() + 1).padStart(2, "0"),
+    String(twoMonthsAhead.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  assert("isWithinNextMonth excludes a date two months ahead", !scrape.isWithinNextMonth(twoMonthsStr));
+
+  // A clearly past date should be out of range
+  assert("isWithinNextMonth excludes a past date", !scrape.isWithinNextMonth("2020-01-01"));
+}
+
+// ---------------------------------------------------------------------------
 // collectWigmoreEventLinksStatic (static-HTML fallback path)
 // ---------------------------------------------------------------------------
 
@@ -125,9 +176,11 @@ console.log("\ncollectWigmoreEventLinksStatic");
   const scrape = require("./scrape-brahms");
 
   // Build a fake listing page that contains a next-month event and a past-month event.
-  const { start } = scrape.getNextMonthDateRange();
-  const nextMonthYear = start.getUTCFullYear();
-  const nextMonthNum = String(start.getUTCMonth() + 1).padStart(2, "0");
+  // Use the 15th of next calendar month so it is always a future in-range date.
+  const now = new Date();
+  const nextMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 15));
+  const nextMonthYear = nextMonthDate.getUTCFullYear();
+  const nextMonthNum = String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0");
   const nextMonthEventSlug = `${nextMonthYear}${nextMonthNum}151930`;
   const nextMonthEventUrl = `https://www.wigmore-hall.org.uk/whats-on/${nextMonthEventSlug}`;
 
