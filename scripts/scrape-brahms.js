@@ -20,33 +20,33 @@ const browserHeaders = {
 // Date range helpers
 // ---------------------------------------------------------------------------
 
-function getNextMonthDateRange() {
+function getSixMonthDateRange() {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0, 23, 59, 59, 999));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 7, 0, 23, 59, 59, 999));
   return { start, end };
 }
 
-function getNextMonthLabel() {
+function getSixMonthLabel() {
   const now = new Date();
   const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  const sameYear = currentMonthStart.getUTCFullYear() === nextMonthStart.getUTCFullYear();
+  const sixthMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 6, 1));
+  const sameYear = currentMonthStart.getUTCFullYear() === sixthMonthStart.getUTCFullYear();
   if (sameYear) {
     const month1 = currentMonthStart.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
-    const month2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    const month2 = sixthMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
     return `${month1}–${month2}`;
   }
   const label1 = currentMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
-  const label2 = nextMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label2 = sixthMonthStart.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
   return `${label1}–${label2}`;
 }
 
-function isWithinNextMonth(dateString) {
+function isWithinSixMonthRange(dateString) {
   if (!dateString) return false;
   const parsed = new Date(`${dateString}T12:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return false;
-  const { start, end } = getNextMonthDateRange();
+  const { start, end } = getSixMonthDateRange();
   return parsed >= start && parsed <= end;
 }
 
@@ -328,7 +328,7 @@ async function extractRenderedEventLinks(page) {
 /**
  * Discover Wigmore Hall event links by rendering the listing page with a
  * headless browser and scrolling to trigger lazy-loaded / infinite-scroll content.
- * @returns {Promise<string[]>} Array of full event URLs from today through end of next calendar month, sorted.
+ * @returns {Promise<string[]>} Array of full event URLs from today through end of the sixth month after the current month, sorted.
  */
 async function collectWigmoreEventLinksWithBrowser() {
   let chromium;
@@ -387,14 +387,14 @@ async function collectWigmoreEventLinksWithBrowser() {
   }
 
   return [...eventLinkSet]
-    .filter((url) => isWithinNextMonth(parseEventDateFromUrl(url)))
+    .filter((url) => isWithinSixMonthRange(parseEventDateFromUrl(url)))
     .sort();
 }
 
 /**
  * Fallback: crawl Wigmore Hall listing pages 0–20 using plain HTTP fetches.
  * This works for statically-rendered events but may miss lazy-loaded content.
- * @returns {Promise<string[]>} Array of full event URLs from today through end of next calendar month, sorted.
+ * @returns {Promise<string[]>} Array of full event URLs from today through end of the sixth month after the current month, sorted.
  */
 async function collectWigmoreEventLinksStatic() {
   const eventLinkSet = new Set();
@@ -414,12 +414,12 @@ async function collectWigmoreEventLinksStatic() {
   }
 
   return [...eventLinkSet]
-    .filter((url) => isWithinNextMonth(parseEventDateFromUrl(url)))
+    .filter((url) => isWithinSixMonthRange(parseEventDateFromUrl(url)))
     .sort();
 }
 
 /**
- * Discover Wigmore Hall event links from today through end of next calendar month.
+ * Discover Wigmore Hall event links from today through end of the sixth month after the current month.
  * Attempts browser-based rendering first to handle lazy-loaded listing pages;
  * falls back to static HTML fetching if Playwright is unavailable.
  * @returns {Promise<string[]>}
@@ -439,7 +439,7 @@ async function collectWigmoreEventLinks() {
 
 async function scrapeWigmoreHall() {
   const eventLinks = await collectWigmoreEventLinks();
-  console.log(`Discovered ${eventLinks.length} Wigmore Hall event(s) in target month`);
+  console.log(`Discovered ${eventLinks.length} Wigmore Hall event(s) in target range`);
   const items = [];
 
   for (const eventUrl of eventLinks) {
@@ -447,7 +447,7 @@ async function scrapeWigmoreHall() {
       const eventHtml = await fetchHtml(eventUrl);
       const event = extractWigmoreEvent(eventHtml, eventUrl);
 
-      if (event && event.date && isWithinNextMonth(event.date)) {
+      if (event && event.date && isWithinSixMonthRange(event.date)) {
         items.push(event);
       }
     } catch (error) {
@@ -481,7 +481,7 @@ async function main() {
 
   const output = {
     generatedAt: new Date().toISOString(),
-    month: getNextMonthLabel(),
+    month: getSixMonthLabel(),
     items
   };
 
@@ -500,8 +500,8 @@ module.exports = {
   parseEventDateFromUrl,
   parseWigmoreDate,
   containsBrahms,
-  isWithinNextMonth,
-  getNextMonthDateRange,
+  isWithinSixMonthRange,
+  getSixMonthDateRange,
   canonicaliseBrahmsWorkTitle,
   extractWigmoreRepertoireProgramme,
   extractWigmoreEvent,
