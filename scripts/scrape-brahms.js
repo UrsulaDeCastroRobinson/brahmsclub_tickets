@@ -4,9 +4,6 @@ const cheerio = require("cheerio");
 
 const sourcesPath = path.join(__dirname, "..", "data", "brahms-sources.json");
 const outputPath = path.join(__dirname, "..", "public", "data", "brahms-performances.json");
-const brahmsWorksPath = path.join(__dirname, "data", "brahms-works.json");
-const wigmoreComposerFallbackSelector = ".w-4\\/12, .sm\\:w-4\\/12";
-const modeWordsRegex = /\b(major|minor)\b/g;
 
 const browserHeaders = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
@@ -101,9 +98,7 @@ function extractSection($, headingText) {
     if ($(el).text().trim().toLowerCase() !== normalised) return;
 
     // Collect following sibling text until the next heading of same/higher level
-    const headingTag = String(el.tagName || "").toLowerCase();
-    const tagLevel = parseInt(headingTag[1], 10);
-    if (Number.isNaN(tagLevel)) return;
+    const tagLevel = parseInt(el.tagName[1], 10);
     let sibling = $(el).next();
     const parts = [];
 
@@ -122,45 +117,6 @@ function extractSection($, headingText) {
   });
 
   return result;
-}
-
-function extractStructuredProgrammeItems($) {
-  const items = [];
-
-  $("h2, h3, h4, h5").each((_, el) => {
-    if ($(el).text().trim().toLowerCase() !== "programme") return;
-
-    const headingTag = String(el.tagName || "").toLowerCase();
-    const tagLevel = parseInt(headingTag[1], 10);
-    if (Number.isNaN(tagLevel)) return;
-    let sibling = $(el).next();
-
-    while (sibling.length) {
-      const sibTag = (sibling.prop("tagName") || "").toLowerCase();
-      if (/^h[1-5]$/.test(sibTag) && parseInt(sibTag[1], 10) <= tagLevel) break;
-
-      if (sibTag === "table") {
-        sibling.find("tr").each((_, row) => {
-          const cells = $(row).find("th, td").map((_, cell) => normaliseWhitespace($(cell).text())).get().filter(Boolean);
-          if (cells.length > 0) items.push(cells);
-        });
-      } else if (sibTag === "ul" || sibTag === "ol") {
-        sibling.find("li").each((_, item) => {
-          const text = normaliseWhitespace($(item).text());
-          if (text) items.push([text]);
-        });
-      } else {
-        const text = normaliseWhitespace(sibling.text());
-        if (text) items.push([text]);
-      }
-
-      sibling = sibling.next();
-    }
-
-    return false;
-  });
-
-  return items;
 }
 
 /**
@@ -197,300 +153,11 @@ function parseWigmoreDate(dateText, url) {
 }
 
 function containsBrahms(text) {
-  // Some extraction paths can collapse adjacent tokens (e.g. "BrahmsViolin"),
-  // so split lowercase-uppercase boundaries before word-boundary matching.
-  const value = (text || "").replace(/([a-z])([A-Z])/g, "$1 $2");
-  return /\bbrahms\b/i.test(value);
+  return /\bbrahms\b/i.test(text);
 }
 
 function normaliseWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
-}
-
-function normaliseForMatch(value) {
-  return normaliseWhitespace(
-    value
-      .toLowerCase()
-      .replace(/[’']/g, "")
-      .replace(/opus/g, "op")
-      .replace(/op\./g, "op")
-      .replace(/no\./g, "no")
-      .replace(/[–—-]/g, " ")
-      .replace(/[^a-z0-9\s]/g, " ")
-  );
-}
-
-function splitTerms(value) {
-  return value.split(" ").filter(Boolean);
-}
-
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function textContainsTerm(normalisedText, term) {
-  if (!term) return false;
-  if (new RegExp(`\\b${escapeRegex(term)}\\b`).test(normalisedText)) return true;
-
-  const modeAgnosticTerm = normaliseWhitespace(term.replace(modeWordsRegex, ""));
-  if (modeAgnosticTerm && modeAgnosticTerm !== term) {
-    if (new RegExp(`\\b${escapeRegex(modeAgnosticTerm)}\\b`).test(normalisedText)) return true;
-  }
-
-  const tokenSet = isFlexibleMultiWordTerm(term) ? new Set(splitTerms(normalisedText)) : null;
-  if (tokenSet) {
-    const termTokens = splitTerms(term);
-    return termTokens.every((token) => tokenSet.has(token));
-  }
-
-  return false;
-}
-
-function isNumberingTerm(term) {
-  return /\bno\b/.test(term) && /\d/.test(term);
-}
-
-function hasNumberingOrDigits(term) {
-  return /\bno\b/.test(term) || /\d/.test(term);
-}
-
-// Numbered tokens (e.g. "no 3", "op 88") must stay exact; descriptive phrases can be order-flexible.
-function isFlexibleMultiWordTerm(term) {
-  return term.includes(" ") && !hasNumberingOrDigits(term);
-}
-
-function findFirstTermPosition(normalisedText, terms) {
-  const tokenPositions = new Map();
-  splitTerms(normalisedText).forEach((token, index) => {
-    if (!tokenPositions.has(token)) {
-      tokenPositions.set(token, index);
-    }
-  });
-
-  return terms.reduce((minIndex, term) => {
-    const tokens = splitTerms(term);
-    const indexes = tokens
-      .map((token) => tokenPositions.get(token))
-      .filter((index) => index !== undefined);
-    if (indexes.length === 0) return minIndex;
-    return Math.min(minIndex, Math.min(...indexes));
-  }, Infinity);
-}
-
-function getBrahmsWorksLibrary() {
-  try {
-    return JSON.parse(fs.readFileSync(brahmsWorksPath, "utf8"));
-  } catch (_) {
-    return [];
-  }
-}
-
-const brahmsWorksLibrary = getBrahmsWorksLibrary();
-
-function findBrahmsProgrammeMatches(text) {
-  const normalisedText = normaliseForMatch(text);
-  if (!normalisedText) return [];
-
-  const matches = [];
-
-  for (const work of brahmsWorksLibrary) {
-    const aliases = (work.aliases || []).map(normaliseForMatch).filter(Boolean);
-    const requiredTerms = (work.required_terms || []).map(normaliseForMatch).filter(Boolean);
-    const coreRequiredTerms = requiredTerms.filter((term) => !isNumberingTerm(term));
-    const optionalTerms = (work.optional_terms || []).map(normaliseForMatch).filter(Boolean);
-    const opusTerm = work.opus ? normaliseForMatch(`op ${work.opus}`) : "";
-
-    const aliasIndexes = aliases
-      .map((alias) => normalisedText.indexOf(alias))
-      .filter((index) => index >= 0);
-    const hasAliasMatch = aliasIndexes.length > 0;
-    const requiredTermsMatched = requiredTerms.every((term) => textContainsTerm(normalisedText, term));
-    const coreRequiredTermsMatched = coreRequiredTerms.every((term) => textContainsTerm(normalisedText, term));
-    const optionalMatches = optionalTerms.filter((term) => textContainsTerm(normalisedText, term)).length;
-    const hasOpusMatch = opusTerm ? textContainsTerm(normalisedText, opusTerm) : false;
-
-    const isConfidentMatch =
-      (hasAliasMatch && (requiredTerms.length === 0 || requiredTermsMatched))
-      || (requiredTermsMatched && hasOpusMatch)
-      || (coreRequiredTerms.length > 0 && coreRequiredTermsMatched && hasOpusMatch)
-      || (requiredTermsMatched && optionalMatches >= 2);
-
-    if (!isConfidentMatch) continue;
-
-    const position =
-      (hasAliasMatch ? Math.min(...aliasIndexes) : Infinity) !== Infinity
-        ? Math.min(...aliasIndexes)
-        : findFirstTermPosition(normalisedText, requiredTerms);
-
-    matches.push({
-      work,
-      position: Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER,
-    });
-  }
-
-  const deduped = new Map();
-  matches
-    .sort((a, b) => a.position - b.position)
-    .forEach(({ work }) => {
-      if (!deduped.has(work.id)) {
-        deduped.set(work.id, work.canonical_title);
-      }
-    });
-
-  return [...deduped.values()];
-}
-
-function normaliseWorkTitleOpComma(title) {
-  return title.replace(/([^,])\s+([Oo]p\.)/, "$1, $2");
-}
-
-function extractInlineBrahmsTitle(text) {
-  const match = normaliseWhitespace(text).match(/\bbrahms\b\s*[:\-–—]\s*(.+)$/i);
-  return match ? normaliseWhitespace(match[1]) : "";
-}
-
-function cleanStructuredWorkTitle(text) {
-  return normaliseWhitespace(
-    text
-      .replace(/^johannes\s+brahms\b\s*[:\-–—]?\s*/i, "")
-      .replace(/^brahms\b\s*[:\-–—]?\s*/i, "")
-      .replace(/^[\s:–—-]+/, "")
-  );
-}
-
-function extractBrahmsWorksFromStructuredProgramme(items) {
-  const titles = [];
-
-  items.forEach((item) => {
-    const parts = item.map((value) => normaliseWhitespace(value)).filter(Boolean);
-    if (parts.length === 0 || !parts.some((part) => containsBrahms(part))) return;
-
-    const candidates = [];
-    const nonBrahmsParts = parts.filter((part) => !containsBrahms(part));
-    candidates.push(...nonBrahmsParts);
-    parts.filter((part) => containsBrahms(part)).forEach((part) => {
-      const inlineTitle = extractInlineBrahmsTitle(part);
-      if (inlineTitle) candidates.push(inlineTitle);
-    });
-
-    candidates
-      .map(cleanStructuredWorkTitle)
-      .filter(Boolean)
-      .filter((title) => !containsBrahms(title))
-      .forEach((title) => {
-        const matchedTitles = findBrahmsProgrammeMatches(title);
-        if (matchedTitles.length === 1) {
-          titles.push(matchedTitles[0]);
-        }
-      });
-  });
-
-  const deduped = new Map();
-  titles.forEach((title) => {
-    const key = normaliseForMatch(title);
-    if (key && !deduped.has(key)) {
-      deduped.set(key, title);
-    }
-  });
-
-  return [...deduped.values()];
-}
-
-function extractBrahmsWorksFromWigmoreRepertoire($) {
-  const titles = [];
-
-  $(".repertoire-work-item").each((_, item) => {
-    // Wigmore currently uses Tailwind utility classes in this left-column block.
-    // Keep the generic artist-link selector first, then class-based fallback.
-    let composerText = normaliseWhitespace($(item).find("a[href^='/artists/']").first().text());
-    if (!composerText) {
-      composerText = normaliseWhitespace($(item).find(wigmoreComposerFallbackSelector).first().text());
-    }
-    if (!containsBrahms(composerText)) return;
-
-    $(item).find(".repertoire-list .rich-text.inline.bold").each((_, workEl) => {
-      const rawTitle = normaliseWhitespace($(workEl).text());
-      if (!rawTitle) return;
-
-      const matchedTitles = findBrahmsProgrammeMatches(rawTitle);
-      if (matchedTitles.length > 0) {
-        matchedTitles.forEach((title) => titles.push(title));
-      }
-    });
-  });
-
-  const deduped = new Map();
-  titles.forEach((title) => {
-    const key = normaliseForMatch(title);
-    if (key && !deduped.has(key)) {
-      deduped.set(key, title);
-    }
-  });
-
-  return [...deduped.values()];
-}
-
-function resolveWigmoreProgramme({
-  programme,
-  structuredProgrammeItems,
-  wigmoreRepertoireWorks,
-}) {
-  const workMatches = [];
-  const pushMatches = (matches) => {
-    matches.forEach((match) => {
-      if (!workMatches.includes(match)) {
-        workMatches.push(match);
-      }
-    });
-  };
-
-  pushMatches(wigmoreRepertoireWorks || []);
-  pushMatches(extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems || []));
-  pushMatches(findBrahmsProgrammeMatches(programme || ""));
-
-  (structuredProgrammeItems || []).forEach((item) => {
-    item.forEach((part) => {
-      pushMatches(findBrahmsProgrammeMatches(part));
-    });
-  });
-
-  if (workMatches.length > 0) {
-    return workMatches.join(" / ");
-  }
-
-  const fallbackCandidates = [];
-  const pushFallbackCandidate = (value) => {
-    const cleaned = normaliseWhitespace(cleanStructuredWorkTitle(value || ""));
-    if (cleaned) fallbackCandidates.push(cleaned);
-  };
-
-  (structuredProgrammeItems || []).forEach((item) => {
-    const parts = item.map((value) => normaliseWhitespace(value)).filter(Boolean);
-    if (!parts.some((part) => containsBrahms(part))) return;
-    parts.filter((part) => !containsBrahms(part)).forEach(pushFallbackCandidate);
-    parts.filter((part) => containsBrahms(part)).forEach((part) => {
-      pushFallbackCandidate(extractInlineBrahmsTitle(part));
-    });
-  });
-
-  if (fallbackCandidates.length === 0 && containsBrahms(programme || "")) {
-    pushFallbackCandidate(programme);
-  }
-
-  const usableFallback = fallbackCandidates
-    .map((value) => value.replace(/^[,;:\-–—\s]+|[,;:\-–—\s]+$/g, ""))
-    .find((value) =>
-      value
-      && !/^(johannes\s+)?brahms$/i.test(value)
-      && !/^\(?\d{4}\s*[-–—]\s*\d{4}\)?$/.test(value)
-      && !/^interval$/i.test(value)
-      && !/^programme$/i.test(value)
-      && !/\b(mon|tues|wednes|thurs|fri|satur|sun)day\b/i.test(value)
-      && !/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(value)
-      && !/\b\d{1,2}[:.]\d{2}\s*(am|pm)?\b/i.test(value)
-    );
-
-  return usableFallback || "Brahms programme";
 }
 
 // ---------------------------------------------------------------------------
@@ -505,50 +172,32 @@ function extractWigmoreEvent(html, url) {
   const $ = cheerio.load(html);
 
   const title = extractTitle(html);
+  const metaDescription = extractMetaContent($, "name", "description");
+  const ogDescription = extractMetaContent($, "property", "og:description");
   const programme = extractSection($, "Programme");
-  const wigmoreRepertoireWorks = extractBrahmsWorksFromWigmoreRepertoire($);
-  const structuredProgrammeItems = extractStructuredProgrammeItems($);
+  const overview = extractSection($, "Overview");
+  const artists = extractSection($, "Artists");
 
   // Date: look for a visible date element; fall back to URL
   const dateEl = $("time").first().text().trim()
     || $(".event-date, .date, [class*='date']").first().text().trim()
     || "";
   const date = parseWigmoreDate(dateEl, url);
-  const resolvedTitle = title || "Wigmore Hall event";
-  const resolvedProgramme = resolveWigmoreProgramme({
-    programme,
-    structuredProgrammeItems,
-    wigmoreRepertoireWorks,
-  });
 
-  const wigmoreRepertoireText = normaliseWhitespace($(".repertoire-work-item").text());
-  const metaText = normaliseWhitespace([
-    extractMetaContent($, "name", "description"),
-    extractMetaContent($, "property", "og:description"),
-  ].filter(Boolean).join(" "));
   const bodyText = extractBodyText($);
-  const programmeOnlyText = [
-    programme,
-    ...(structuredProgrammeItems || []).flat(),
-  ]
+
+  const combinedText = [title, metaDescription, ogDescription, programme, overview, artists, bodyText]
     .filter(Boolean)
     .join(" ");
-  const hasBrahmsInProgramme =
-    containsBrahms(programmeOnlyText)
-    || containsBrahms(wigmoreRepertoireText);
-  const hasBrahmsWorkInProgramme =
-    wigmoreRepertoireWorks.length > 0
-    || extractBrahmsWorksFromStructuredProgramme(structuredProgrammeItems).length > 0
-    || findBrahmsProgrammeMatches(programmeOnlyText).length > 0;
-  const hasBrahmsInBroadPageSignals = containsBrahms([
-    resolvedTitle,
-    bodyText,
-    metaText,
-  ].filter(Boolean).join(" "));
 
-  if (!hasBrahmsInProgramme && !hasBrahmsWorkInProgramme && !hasBrahmsInBroadPageSignals) {
+  if (!containsBrahms(combinedText)) {
     return null;
   }
+
+  const resolvedTitle = title || "Wigmore Hall event";
+  const resolvedProgramme = normaliseWhitespace(
+    programme || overview || metaDescription || ogDescription || artists || bodyText || "Brahms programme"
+  );
 
   return {
     title: resolvedTitle,
