@@ -449,17 +449,20 @@ function extractBrittenPearsEventFromDetailPage(html, eventUrl) {
     [title, metaDescription, metaListText, mainText].filter(Boolean).join(" ")
   );
 
-  if (!containsBrahms(detailText)) return null;
+  if (!containsBrahms(detailText)) return { event: null, rejection: "no_brahms_mention" };
   const canonicalWorks = extractCanonicalBrahmsWorksFromText(detailText);
-  if (!canonicalWorks.length) return null;
+  if (!canonicalWorks.length) return { event: null, rejection: "no_canonical_work" };
 
   return {
-    title,
-    date: formatIsoDate(dateValue),
-    venue: venue || "Britten Pears Arts",
-    source: "Britten Pears Arts",
-    programme: canonicalWorks.join(" / "),
-    url: eventUrl,
+    event: {
+      title,
+      date: formatIsoDate(dateValue),
+      venue: venue || "Britten Pears Arts",
+      source: "Britten Pears Arts",
+      programme: canonicalWorks.join(" / "),
+      url: eventUrl,
+    },
+    rejection: null,
   };
 }
 
@@ -499,6 +502,7 @@ async function scrapeBrittenPearsWhatsOn(source) {
     if (!pageKey || visitedPages.has(pageKey)) continue;
     visitedPages.add(pageKey);
 
+    console.log(`  [listing] ${pageUrl}`);
     const html = await fetchHtml(pageUrl);
     for (const discoveredPageUrl of extractBrittenPearsListingPageUrls(html, listingUrl)) {
       if (!visitedPages.has(discoveredPageUrl)) {
@@ -510,18 +514,30 @@ async function scrapeBrittenPearsWhatsOn(source) {
     }
   }
 
+  let fetchedCount = 0;
+  let rejectedNoBrahms = 0;
+  let rejectedNoCanonicalWork = 0;
   const parsedEvents = [];
+
   for (const eventUrl of discoveredEventUrls) {
     try {
       const html = await fetchHtml(eventUrl);
-      const event = extractBrittenPearsEventFromDetailPage(html, eventUrl);
-      if (event) parsedEvents.push(event);
+      fetchedCount += 1;
+      const { event, rejection } = extractBrittenPearsEventFromDetailPage(html, eventUrl);
+      if (event) {
+        parsedEvents.push(event);
+      } else if (rejection === "no_brahms_mention") {
+        rejectedNoBrahms += 1;
+      } else if (rejection === "no_canonical_work") {
+        rejectedNoCanonicalWork += 1;
+      }
     } catch (error) {
-      console.warn(`Failed to parse Britten Pears event ${eventUrl}: ${error.message}`);
+      console.warn(`  [warn] Failed to fetch/parse ${eventUrl}: ${error.message}`);
     }
   }
 
-  const items = dedupeEvents(parsedEvents)
+  const deduped = dedupeEvents(parsedEvents);
+  const items = deduped
     .filter((item) => item.date ? isWithinNextMonth(item.date) : true)
     .sort((a, b) => {
       if (a.date && b.date) return a.date.localeCompare(b.date);
@@ -529,6 +545,24 @@ async function scrapeBrittenPearsWhatsOn(source) {
       if (a.date && !b.date) return -1;
       return a.title.localeCompare(b.title);
     });
+  const rejectedDateWindow = deduped.length - items.length;
+
+  const visitedList = [...visitedPages];
+  const previewCount = Math.min(visitedList.length, 3);
+  const previewPages = visitedList.slice(0, previewCount).map((u) => `    ${u}`).join("\n");
+  const morePages = visitedList.length > previewCount
+    ? `\n    ... and ${visitedList.length - previewCount} more` : "";
+
+  console.log("\n--- Britten Pears Arts scrape summary ---");
+  console.log(`  visited ${visitedPages.size} listing page(s)${visitedPages.size > 0 ? ":" : ""}`);
+  if (visitedPages.size > 0) console.log(`${previewPages}${morePages}`);
+  console.log(`  discovered ${discoveredEventUrls.size} unique event URL(s)`);
+  console.log(`  fetched ${fetchedCount} event page(s)`);
+  console.log(`  rejected ${rejectedNoBrahms} for no Brahms mention`);
+  console.log(`  rejected ${rejectedNoCanonicalWork} for no canonical work match`);
+  console.log(`  rejected ${rejectedDateWindow} outside date window`);
+  console.log(`  kept ${items.length} final event(s)`);
+  console.log("-----------------------------------------\n");
 
   console.log(`Scraped ${items.length} Britten Pears Arts event(s)`);
   return items;
