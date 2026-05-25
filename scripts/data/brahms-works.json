@@ -1,55 +1,43 @@
 [
   {
-    "id": "piano-sonata-no-1-op-1",
-    "canonical_title": "Piano Sonata No. 1 in C major, Op. 1",
-    "category": "piano sonata",
-    "opus": "1",
-    "aliases": [
-      "Piano Sonata No. 1 in C major, Op. 1",
-      "Piano Sonata No. 1 in C major Op. 1",
-      "Piano Sonata No. 1 in C major"
-    ],
-    "required_terms": ["piano", "sonata", "no 1"],
-    "optional_terms": ["c major", "op 1"]
-  },
-  {
-    "id": "piano-sonata-no-2-op-2",
-    "canonical_title": "Piano Sonata No. 2 in F-sharp minor, Op. 2",
-    "category": "piano sonata",
-    "opus": "2",
-    "aliases": [
-      "Piano Sonata No. 2 in F-sharp minor, Op. 2",
-      "Piano Sonata No. 2 in F sharp minor, Op. 2",
-      "Piano Sonata No. 2 in F-sharp minor Op. 2",
-      "Piano Sonata No. 2 in F sharp minor Op. 2"
-    ],
-    "required_terms": ["piano", "sonata", "no 2"],
-    "optional_terms": ["f sharp minor", "op 2"]
-  },
-  {
-    "id": "piano-sonata-no-3-op-5",
-    "canonical_title": "Piano Sonata No. 3 in F minor, Op. 5",
-    "category": "piano sonata",
-    "opus": "5",
-    "aliases": [
-      "Piano Sonata No. 3 in F minor, Op. 5",
-      "Piano Sonata No. 3 in F minor Op. 5",
-      "Piano Sonata No. 3 in F minor"
-    ],
-    "required_terms": ["piano", "sonata", "no 3"],
-    "optional_terms": ["f minor", "op 5"]
-  },
-  {
     "id": "piano-trio-no-1-op-8",
     "canonical_title": "Piano Trio No. 1 in B major, Op. 8",
     "category": "chamber",
     "opus": "8",
     "aliases": [
       "Piano Trio No. 1 in B major, Op. 8",
-      "Piano Trio No. 1 in B major Op. 8"
+      "Piano Trio No. 1 in B major Op. 8",
+      "Piano Trio in B major, Op. 8"
     ],
-    "required_terms": ["piano", "trio", "no 1"],
-    "optional_terms": ["b major", "op 8"]
+    "required_terms": [
+      "piano",
+      "trio",
+      "no 1"
+    ],
+    "optional_terms": [
+      "b major",
+      "op 8"
+    ]
+  },
+  {
+    "id": "string-sextet-no-1-op-18",
+    "canonical_title": "String Sextet No. 1 in B-flat major, Op. 18",
+    "category": "chamber",
+    "opus": "18",
+    "aliases": [
+      "String Sextet No. 1 in B-flat major, Op. 18",
+      "String Sextet No. 1 in B flat major Op. 18",
+      "String Sextet in B-flat major, Op. 18"
+    ],
+    "required_terms": [
+      "string",
+      "sextet",
+      "no 1"
+    ],
+    "optional_terms": [
+      "b flat major",
+      "op 18"
+    ]
   },
   {
     "id": "piano-quartet-no-1-op-25",
@@ -58,10 +46,18 @@
     "opus": "25",
     "aliases": [
       "Piano Quartet No. 1 in G minor, Op. 25",
-      "Piano Quartet No. 1 in G minor Op. 25"
+      "Piano Quartet No. 1 in G minor Op. 25",
+      "Piano Quartet in G minor, Op. 25"
     ],
-    "required_terms": ["piano", "quartet", "no 1"],
-    "optional_terms": ["g minor", "op 25"]
+    "required_terms": [
+      "piano",
+      "quartet",
+      "no 1"
+    ],
+    "optional_terms": [
+      "g minor",
+      "op 25"
+    ]
   },
   {
     "id": "piano-quartet-no-2-op-26",
@@ -70,10 +66,18 @@
     "opus": "26",
     "aliases": [
       "Piano Quartet No. 2 in A major, Op. 26",
-      "Piano Quartet No. 2 in A major Op. 26"
+      "Piano Quartet No. 2 in A major Op. 26",
+      "Piano Quartet in A major, Op. 26"
     ],
-    "required_terms": ["piano", "quartet", "no 2"],
-    "optional_terms": ["a major", "op 26"]
+    "required_terms": [
+      "piano",
+      "quartet",
+      "no 2"
+    ],
+    "optional_terms": [
+      "a major",
+      "op 26"
+    ]
   },
   {
     "id": "piano-quintet-op-34",
@@ -82,10 +86,37 @@
     "opus": "34",
     "aliases": [
       "Piano Quintet in F minor, Op. 34",
-      "Piano Quintet in F minor Op. 34"
+      "Piano Quintet in F minor Op. 34",
+      "Piano Quintet, Op. 34"
     ],
-    "required_terms": ["piano", "quintet"],
-    "optional_terms": ["f minor", "op 34"]
+    "required_terms": [
+      "piano",
+      "quintet"
+    ],
+    "optional_terms": [
+      "f minor",
+      "op 34"
+    ]
+  },
+  {
+    "id": "string-sextet-no-2-op-36",
+    "canonical_title": "String Sextet No. 2 in G major, Op. 36",
+    "category": "chamber",
+    "opus": "36",
+    "aliases": [
+      "String Sextet No. 2 in G major, Op. 36",
+      "String Sextet No. 2 in G major Op. 36",
+      "String Sextet in G major, Op. 36"
+    ],
+    "required_terms": [
+      "string",
+      "sextet",
+      "no 2"
+    ],
+    "optional_terms": [
+      "g major",
+      "op 36"
+    ]
   },
   {
     "id": "cello-sonata-no-1-op-38",
@@ -94,10 +125,119 @@
     "opus": "38",
     "aliases": [
       "Cello Sonata No. 1 in E minor, Op. 38",
-      "Cello Sonata No. 1 in E minor Op. 38"
+      "Cello Sonata No. 1 in E minor Op. 38",
+      "Cello Sonata in E minor, Op. 38"
     ],
-    "required_terms": ["cello", "sonata", "no 1"],
-    "optional_terms": ["e minor", "op 38"]
+    "required_terms": [
+      "cello",
+      "sonata",
+      "no 1"
+    ],
+    "optional_terms": [
+      "e minor",
+      "op 38"
+    ]
+  },
+  {
+    "id": "horn-trio-op-40",
+    "canonical_title": "Horn Trio in E-flat major, Op. 40",
+    "category": "chamber",
+    "opus": "40",
+    "aliases": [
+      "Horn Trio in E-flat major, Op. 40",
+      "Horn Trio in E flat major Op. 40",
+      "Trio for Piano, Violin and Horn in E-flat major, Op. 40"
+    ],
+    "required_terms": [
+      "horn",
+      "trio"
+    ],
+    "optional_terms": [
+      "e flat major",
+      "op 40"
+    ]
+  },
+  {
+    "id": "string-quartet-no-1-op-51-no-1",
+    "canonical_title": "String Quartet No. 1 in C minor, Op. 51 No. 1",
+    "category": "chamber",
+    "opus": "51 no 1",
+    "aliases": [
+      "String Quartet No. 1 in C minor, Op. 51 No. 1",
+      "String Quartet No. 1 in C minor Op. 51 No. 1",
+      "String Quartet in C minor, Op. 51 No. 1"
+    ],
+    "required_terms": [
+      "string",
+      "quartet",
+      "no 1"
+    ],
+    "optional_terms": [
+      "c minor",
+      "op 51 no 1",
+      "op 51"
+    ]
+  },
+  {
+    "id": "string-quartet-no-2-op-51-no-2",
+    "canonical_title": "String Quartet No. 2 in A minor, Op. 51 No. 2",
+    "category": "chamber",
+    "opus": "51 no 2",
+    "aliases": [
+      "String Quartet No. 2 in A minor, Op. 51 No. 2",
+      "String Quartet No. 2 in A minor Op. 51 No. 2",
+      "String Quartet in A minor, Op. 51 No. 2"
+    ],
+    "required_terms": [
+      "string",
+      "quartet",
+      "no 2"
+    ],
+    "optional_terms": [
+      "a minor",
+      "op 51 no 2",
+      "op 51"
+    ]
+  },
+  {
+    "id": "piano-quartet-no-3-op-60",
+    "canonical_title": "Piano Quartet No. 3 in C minor, Op. 60",
+    "category": "chamber",
+    "opus": "60",
+    "aliases": [
+      "Piano Quartet No. 3 in C minor, Op. 60",
+      "Piano Quartet No. 3 in C minor Op. 60",
+      "Piano Quartet in C minor, Op. 60"
+    ],
+    "required_terms": [
+      "piano",
+      "quartet",
+      "no 3"
+    ],
+    "optional_terms": [
+      "c minor",
+      "op 60"
+    ]
+  },
+  {
+    "id": "string-quartet-no-3-op-67",
+    "canonical_title": "String Quartet No. 3 in B-flat major, Op. 67",
+    "category": "chamber",
+    "opus": "67",
+    "aliases": [
+      "String Quartet No. 3 in B-flat major, Op. 67",
+      "String Quartet No. 3 in B flat major Op. 67",
+      "String Quartet in B-flat major, Op. 67"
+    ],
+    "required_terms": [
+      "string",
+      "quartet",
+      "no 3"
+    ],
+    "optional_terms": [
+      "b flat major",
+      "op 67"
+    ]
   },
   {
     "id": "violin-sonata-no-1-op-78",
@@ -106,10 +246,18 @@
     "opus": "78",
     "aliases": [
       "Violin Sonata No. 1 in G major, Op. 78",
-      "Violin Sonata No. 1 in G major Op. 78"
+      "Violin Sonata No. 1 in G major Op. 78",
+      "Violin Sonata in G major, Op. 78"
     ],
-    "required_terms": ["violin", "sonata", "no 1"],
-    "optional_terms": ["g major", "op 78"]
+    "required_terms": [
+      "violin",
+      "sonata",
+      "no 1"
+    ],
+    "optional_terms": [
+      "g major",
+      "op 78"
+    ]
   },
   {
     "id": "piano-trio-no-2-op-87",
@@ -118,10 +266,18 @@
     "opus": "87",
     "aliases": [
       "Piano Trio No. 2 in C major, Op. 87",
-      "Piano Trio No. 2 in C major Op. 87"
+      "Piano Trio No. 2 in C major Op. 87",
+      "Piano Trio in C major, Op. 87"
     ],
-    "required_terms": ["piano", "trio", "no 2"],
-    "optional_terms": ["c major", "op 87"]
+    "required_terms": [
+      "piano",
+      "trio",
+      "no 2"
+    ],
+    "optional_terms": [
+      "c major",
+      "op 87"
+    ]
   },
   {
     "id": "string-quintet-no-1-op-88",
@@ -131,13 +287,17 @@
     "aliases": [
       "String Quintet No. 1 in F major, Op. 88",
       "String Quintet No. 1 in F major Op. 88",
-      "String Quintet in F major, Op. 88",
-      "String Quintet in F major Op. 88",
-      "String Quintet in F, Op. 88",
-      "String Quintet in F Op. 88"
+      "String Quintet in F major, Op. 88"
     ],
-    "required_terms": ["string", "quintet", "no 1"],
-    "optional_terms": ["f major", "op 88"]
+    "required_terms": [
+      "string",
+      "quintet",
+      "no 1"
+    ],
+    "optional_terms": [
+      "f major",
+      "op 88"
+    ]
   },
   {
     "id": "cello-sonata-no-2-op-99",
@@ -146,10 +306,18 @@
     "opus": "99",
     "aliases": [
       "Cello Sonata No. 2 in F major, Op. 99",
-      "Cello Sonata No. 2 in F major Op. 99"
+      "Cello Sonata No. 2 in F major Op. 99",
+      "Cello Sonata in F major, Op. 99"
     ],
-    "required_terms": ["cello", "sonata", "no 2"],
-    "optional_terms": ["f major", "op 99"]
+    "required_terms": [
+      "cello",
+      "sonata",
+      "no 2"
+    ],
+    "optional_terms": [
+      "f major",
+      "op 99"
+    ]
   },
   {
     "id": "violin-sonata-no-2-op-100",
@@ -158,10 +326,18 @@
     "opus": "100",
     "aliases": [
       "Violin Sonata No. 2 in A major, Op. 100",
-      "Violin Sonata No. 2 in A major Op. 100"
+      "Violin Sonata No. 2 in A major Op. 100",
+      "Violin Sonata in A major, Op. 100"
     ],
-    "required_terms": ["violin", "sonata", "no 2"],
-    "optional_terms": ["a major", "op 100"]
+    "required_terms": [
+      "violin",
+      "sonata",
+      "no 2"
+    ],
+    "optional_terms": [
+      "a major",
+      "op 100"
+    ]
   },
   {
     "id": "piano-trio-no-3-op-101",
@@ -170,10 +346,18 @@
     "opus": "101",
     "aliases": [
       "Piano Trio No. 3 in C minor, Op. 101",
-      "Piano Trio No. 3 in C minor Op. 101"
+      "Piano Trio No. 3 in C minor Op. 101",
+      "Piano Trio in C minor, Op. 101"
     ],
-    "required_terms": ["piano", "trio", "no 3"],
-    "optional_terms": ["c minor", "op 101"]
+    "required_terms": [
+      "piano",
+      "trio",
+      "no 3"
+    ],
+    "optional_terms": [
+      "c minor",
+      "op 101"
+    ]
   },
   {
     "id": "violin-sonata-no-3-op-108",
@@ -182,10 +366,18 @@
     "opus": "108",
     "aliases": [
       "Violin Sonata No. 3 in D minor, Op. 108",
-      "Violin Sonata No. 3 in D minor Op. 108"
+      "Violin Sonata No. 3 in D minor Op. 108",
+      "Violin Sonata in D minor, Op. 108"
     ],
-    "required_terms": ["violin", "sonata", "no 3"],
-    "optional_terms": ["d minor", "op 108"]
+    "required_terms": [
+      "violin",
+      "sonata",
+      "no 3"
+    ],
+    "optional_terms": [
+      "d minor",
+      "op 108"
+    ]
   },
   {
     "id": "string-quintet-no-2-op-111",
@@ -194,10 +386,18 @@
     "opus": "111",
     "aliases": [
       "String Quintet No. 2 in G major, Op. 111",
-      "String Quintet No. 2 in G major Op. 111"
+      "String Quintet No. 2 in G major Op. 111",
+      "String Quintet in G major, Op. 111"
     ],
-    "required_terms": ["string", "quintet", "no 2"],
-    "optional_terms": ["g major", "op 111"]
+    "required_terms": [
+      "string",
+      "quintet",
+      "no 2"
+    ],
+    "optional_terms": [
+      "g major",
+      "op 111"
+    ]
   },
   {
     "id": "clarinet-trio-op-114",
@@ -206,10 +406,17 @@
     "opus": "114",
     "aliases": [
       "Clarinet Trio in A minor, Op. 114",
-      "Clarinet Trio in A minor Op. 114"
+      "Clarinet Trio in A minor Op. 114",
+      "Trio for Clarinet, Cello and Piano in A minor, Op. 114"
     ],
-    "required_terms": ["clarinet", "trio"],
-    "optional_terms": ["a minor", "op 114"]
+    "required_terms": [
+      "clarinet",
+      "trio"
+    ],
+    "optional_terms": [
+      "a minor",
+      "op 114"
+    ]
   },
   {
     "id": "clarinet-quintet-op-115",
@@ -218,10 +425,17 @@
     "opus": "115",
     "aliases": [
       "Clarinet Quintet in B minor, Op. 115",
-      "Clarinet Quintet in B minor Op. 115"
+      "Clarinet Quintet in B minor Op. 115",
+      "Quintet for Clarinet and Strings in B minor, Op. 115"
     ],
-    "required_terms": ["clarinet", "quintet"],
-    "optional_terms": ["b minor", "op 115"]
+    "required_terms": [
+      "clarinet",
+      "quintet"
+    ],
+    "optional_terms": [
+      "b minor",
+      "op 115"
+    ]
   },
   {
     "id": "clarinet-sonata-no-1-op-120-no-1",
@@ -231,10 +445,20 @@
     "aliases": [
       "Clarinet Sonata No. 1 in F minor, Op. 120 No. 1",
       "Clarinet Sonata No. 1 in F minor Op. 120 No. 1",
-      "Clarinet Sonata No. 1 in F minor, Op. 120/1"
+      "Clarinet Sonata in F minor, Op. 120 No. 1",
+      "Clarinet Sonata in F minor, Op. 120/1"
     ],
-    "required_terms": ["clarinet", "sonata", "no 1"],
-    "optional_terms": ["f minor", "op 120 no 1", "op 120"]
+    "required_terms": [
+      "clarinet",
+      "sonata",
+      "no 1"
+    ],
+    "optional_terms": [
+      "f minor",
+      "op 120 no 1",
+      "op 120 1",
+      "op 120"
+    ]
   },
   {
     "id": "clarinet-sonata-no-2-op-120-no-2",
@@ -244,9 +468,19 @@
     "aliases": [
       "Clarinet Sonata No. 2 in E-flat major, Op. 120 No. 2",
       "Clarinet Sonata No. 2 in E flat major Op. 120 No. 2",
-      "Clarinet Sonata No. 2 in E-flat major, Op. 120/2"
+      "Clarinet Sonata in E-flat major, Op. 120 No. 2",
+      "Clarinet Sonata in E flat major, Op. 120/2"
     ],
-    "required_terms": ["clarinet", "sonata", "no 2"],
-    "optional_terms": ["e flat major", "op 120 no 2", "op 120"]
+    "required_terms": [
+      "clarinet",
+      "sonata",
+      "no 2"
+    ],
+    "optional_terms": [
+      "e flat major",
+      "op 120 no 2",
+      "op 120 2",
+      "op 120"
+    ]
   }
 ]

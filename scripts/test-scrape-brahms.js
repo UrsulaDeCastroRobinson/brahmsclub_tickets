@@ -13,6 +13,7 @@ const {
   containsBrahms,
   isWithinNextMonth,
   getNextMonthDateRange,
+  canonicaliseBrahmsWorkTitle,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
 } = require("./scrape-brahms");
@@ -115,6 +116,35 @@ console.log("\ncontainsBrahms");
   assert("matches brahms (lowercase)", containsBrahms("featuring brahms"));
   assert("matches BRAHMS (uppercase)", containsBrahms("BRAHMS Piano Quartet"));
   assert("does not match partial word", !containsBrahms("Abrahmson conducts"));
+}
+
+console.log("\ncanonicaliseBrahmsWorkTitle");
+
+{
+  assert(
+    "distinguishes Op. 51 No. 1",
+    canonicaliseBrahmsWorkTitle("String Quartet No. 1 in C minor Op. 51 No. 1") ===
+      "String Quartet No. 1 in C minor, Op. 51 No. 1"
+  );
+  assert(
+    "distinguishes Op. 51 No. 2",
+    canonicaliseBrahmsWorkTitle("String Quartet in A minor, Op. 51 No. 2") ===
+      "String Quartet No. 2 in A minor, Op. 51 No. 2"
+  );
+  assert(
+    "matches Clarinet Sonata No. 1 abbreviated as Op. 120/1",
+    canonicaliseBrahmsWorkTitle("Clarinet Sonata in F minor, Op. 120/1") ===
+      "Clarinet Sonata No. 1 in F minor, Op. 120 No. 1"
+  );
+  assert(
+    "matches Clarinet Sonata No. 2 with E flat spelling",
+    canonicaliseBrahmsWorkTitle("Clarinet Sonata in E flat major, Op. 120/2") ===
+      "Clarinet Sonata No. 2 in E-flat major, Op. 120 No. 2"
+  );
+  assert(
+    "does not match removed works outside the curated library",
+    canonicaliseBrahmsWorkTitle("Piano Sonata No. 1 in C major, Op. 1") === ""
+  );
 }
 
 console.log("\nextractWigmoreEvent");
