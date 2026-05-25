@@ -274,6 +274,10 @@ console.log("\nextractWigmoreEvent");
     "meta description text is not used as direct programme source",
     event && event.programme === "Brahms programme"
   );
+  assert(
+    "meta description wording is excluded from resolved programme",
+    event && !/clarinet trio in a minor/i.test(event.programme)
+  );
 }
 
 {
@@ -431,6 +435,10 @@ console.log("\nextractWigmoreEvent");
   assert(
     "overview/meta fallback retention does not treat overview as programme",
     event && event.programme === "Brahms programme"
+  );
+  assert(
+    "overview wording is excluded from resolved programme",
+    event && !/legacy/i.test(event.programme)
   );
 }
 
