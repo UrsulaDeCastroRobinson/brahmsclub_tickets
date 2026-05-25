@@ -264,7 +264,11 @@ console.log("\nextractWigmoreEvent");
 {
   const html = `<html><head>
     <meta name="description" content="A recital featuring Schubert and Brahms: Clarinet Trio in A minor, Op. 114.">
-  </head><body><h1>Chamber recital</h1></body></html>`;
+  </head><body>
+    <h1>Chamber recital</h1>
+    <h3>Programme</h3>
+    <p>Schubert: Sonata in A major, D. 664</p>
+  </body></html>`;
   const event = extractWigmoreEvent(html, "https://www.wigmore-hall.org.uk/whats-on/202606101930");
   assert(
     "meta description Brahms mention without Programme section is retained",
@@ -277,6 +281,10 @@ console.log("\nextractWigmoreEvent");
   assert(
     "meta description wording is excluded from resolved programme",
     event && !/clarinet trio in a minor/i.test(event.programme)
+  );
+  assert(
+    "non-Brahms programme text is excluded from retained fallback programme",
+    event && !/schubert/i.test(event.programme)
   );
 }
 
@@ -439,6 +447,10 @@ console.log("\nextractWigmoreEvent");
   assert(
     "overview wording is excluded from resolved programme",
     event && !/legacy/i.test(event.programme)
+  );
+  assert(
+    "non-Brahms programme section text is excluded from fallback programme",
+    event && !/schumann/i.test(event.programme)
   );
 }
 
