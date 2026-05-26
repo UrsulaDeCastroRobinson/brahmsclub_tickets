@@ -29,9 +29,9 @@ export default function BrahmsFinder() {
     <ResponsiveContainer>
       <main className="page page--brahms-finder">
         <section className="container">
-          <h1 className="club-title">Brahms in London Next Month</h1>
+          <h1 className="club-title">Brahms in London</h1>
           <p className="club-description">
-            A curated list of upcoming London performances featuring Brahms.
+            A curated list of upcoming London performances featuring Brahms over the coming months.
           </p>
 
           <Link className="back-link" href="/">Back to Home</Link>
@@ -41,7 +41,7 @@ export default function BrahmsFinder() {
 
           {!loading && !error && (
             <>
-              <p><strong>Month:</strong> {data.month || "Not available yet"}</p>
+              <p><strong>Range:</strong> {data.month || "Not available yet"}</p>
               <p><strong>Last updated:</strong> {data.generatedAt || "Not available yet"}</p>
 
               {data.items.length === 0 ? (
