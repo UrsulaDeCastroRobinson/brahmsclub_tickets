@@ -1,14 +1,150 @@
 {
-  "generatedAt": "2026-05-24T00:00:00Z",
-  "month": "June 2026",
+  "generatedAt": "2026-06-01T21:58:43.778Z",
+  "month": "June–December 2026",
   "items": [
     {
-      "title": "Sample Brahms chamber concert",
-      "date": "2026-06-12",
+      "title": "Belcea Quartet; Tabea Zimmermann viola",
+      "date": "2026-06-03",
       "venue": "Wigmore Hall",
       "source": "Wigmore Hall",
-      "programme": "Brahms: String Quartet No. 3 in B-flat major, Op. 67",
-      "url": ""
+      "programme": "String Quintet No. 1 in F major, Op. 88",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202606031930"
+    },
+    {
+      "title": "Ian Bostridge tenor; Piotr Anderszewski piano; Katy Hamilton presenter",
+      "date": "2026-06-06",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Intermezzo in B minor Op. 119 No. 1 / Intermezzo in C Op. 119 No. 3 / Intermezzo in A minor Op. 118 No. 1 / Intermezzo in A Op. 118 No. 2 / Intermezzo in B flat minor Op. 117 No. 2 / Intermezzo in E flat minor Op. 118 No. 6",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202606061930"
+    },
+    {
+      "title": "Simone Lamsma violin; Jonathan Fournel piano",
+      "date": "2026-06-13",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202606131930"
+    },
+    {
+      "title": "Khrystyna Mykhailichenko piano",
+      "date": "2026-06-17",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Piano Sonata No. 3 in F minor Op. 5",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202606171300"
+    },
+    {
+      "title": "Matthias Goerne baritone; Alexandre Kantorow piano",
+      "date": "2026-06-24",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Die Mainacht Op. 43 No. 2 / Ich schell mein Horn ins Jammertal Op. 43 No. 3 / Der Gang zum Liebchen Op. 48 No. 1 / Vergangen ist mir Glück und Heil Op. 48 No. 6 / Es träumte mir, ich sei dir teuer Op. 57 No. 3 / Ach, wende diesen Blick Op. 57 No. 4 / Serenade Op. 70 No. 3 / An den Mond Op. 71 No. 2 / Alte Liebe Op. 72 No. 1 / Sommerfäden Op. 72 No. 2 / O kühler Wald Op. 72 No. 3 / Verzagen Op. 72 No. 4 / Auf dem Kirchhofe Op. 105 No. 4 / 4 Serious Songs Op. 121 / :",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202606241300"
+    },
+    {
+      "title": "Matthew Barley cello; Mishka Rushdie Momen piano",
+      "date": "2026-07-05",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Cello Sonata No. 1 in E minor, Op. 38",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607051130"
+    },
+    {
+      "title": "Julian Bliss clarinet; James Baillieu piano",
+      "date": "2026-07-06",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Clarinet Sonata No. 2 in E-flat major, Op. 120 No. 2 / Clarinet Sonata No. 1 in F minor, Op. 120 No. 1",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607061930"
+    },
+    {
+      "title": "Konstantin Lifschitz piano",
+      "date": "2026-07-10",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "7 Fantasien Op. 116",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607101930"
+    },
+    {
+      "title": "Anja Mittermüller mezzo-soprano; Richard Fu piano",
+      "date": "2026-07-12",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Sapphische Ode Op. 94 No. 4 / Meine Liebe ist grün Op. 63 No. 5 / Wie bist du, meine Königin Op. 32 No. 9 / Zigeunerlieder Op. 103 / : / In stiller Nacht WoO. 33 No. 42",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607121500"
+    },
+    {
+      "title": "Adrian Brendel cello; Dénes Várjon piano",
+      "date": "2026-07-12",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Cello Sonata No. 1 in E minor, Op. 38",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607121930"
+    },
+    {
+      "title": "Maria Ioudenitch violin; Roman Borisov piano",
+      "date": "2026-07-20",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202607201930"
+    },
+    {
+      "title": "Barry Douglas piano",
+      "date": "2026-09-21",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Capriccio in D minor Op. 116 No. 1 / Intermezzo in E Op. 116 No. 4 / Capriccio in D minor Op. 116 No. 7",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202609211300"
+    },
+    {
+      "title": "Sol Gabetta cello; Kristian Bezuidenhout piano",
+      "date": "2026-10-05",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Feldeinsamkeit Op. 86 No. 2 / Wie Melodien zieht es mir Op. 105 No. 1 / Intermezzo in A Op. 118 No. 2 / Cello Sonata No. 1 in E minor, Op. 38",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610051930"
+    },
+    {
+      "title": "Iestyn Davies countertenor; Oliver Wass harp",
+      "date": "2026-10-08",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610081930"
+    },
+    {
+      "title": "Elena Urioste violin; Tom Poster piano",
+      "date": "2026-10-12",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610121300"
+    },
+    {
+      "title": "Soloists of the Kronberg Academy; Kirill Gerstein piano",
+      "date": "2026-10-25",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "F-A-E Sonata WoO. 22 / :",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610251130"
+    },
+    {
+      "title": "Soloists of the Kronberg Academy; Kirill Gerstein piano",
+      "date": "2026-10-25",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Piano Quintet in F minor, Op. 34",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610251930"
+    },
+    {
+      "title": "Dame Sarah Connolly mezzo-soprano; Joseph Middleton piano",
+      "date": "2026-10-27",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Von waldbekränzter Höhe Op. 57 No. 1 / Es träumte mir, ich sei dir teuer Op. 57 No. 3 / Verzagen Op. 72 No. 4 / Nachtwandler Op. 86 No. 3",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202610271930"
     }
   ]
 }
