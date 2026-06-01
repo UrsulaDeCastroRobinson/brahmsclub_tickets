@@ -1,0 +1,45 @@
+name: Update Brahms Data
+
+on:
+  schedule:
+    # Runs every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium with OS dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Brahms scraper
+        run: node scripts/scrape-brahms.js
+
+      - name: Commit and push updated JSON if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/brahms-performances.json
+          if git diff --cached --quiet; then
+            echo "No changes to brahms-performances.json — skipping commit."
+          else
+            git commit -m "chore: update brahms-performances.json [skip ci]"
+            git push
+          fi
