@@ -43,7 +43,7 @@ function hasRenderableContent(item) {
 function isInLibrary(item) {
   const programmeWorks = splitProgramme(item.programme);
   if (programmeWorks.length === 0) return false;
-  return programmeWorks.every((work) => LIBRARY_PROGRAMMES.has(work));
+  return programmeWorks.some((work) => LIBRARY_PROGRAMMES.has(work));
 }
 
 function parseTimestamp(value) {
