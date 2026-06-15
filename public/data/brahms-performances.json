@@ -1,15 +1,7 @@
 {
-  "generatedAt": "2026-06-08T07:43:29.956Z",
+  "generatedAt": "2026-06-15T07:59:53.444Z",
   "month": "June–December 2026",
   "items": [
-    {
-      "title": "Simone Lamsma violin; Jonathan Fournel piano",
-      "date": "2026-06-13",
-      "venue": "Wigmore Hall",
-      "source": "Wigmore Hall",
-      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
-      "url": "https://www.wigmore-hall.org.uk/whats-on/202606131930"
-    },
     {
       "title": "Khrystyna Mykhailichenko piano",
       "date": "2026-06-17",
@@ -137,6 +129,14 @@
       "source": "Wigmore Hall",
       "programme": "Viola Sonata in E flat Op. 120 No. 2",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202611011130"
+    },
+    {
+      "title": "Takács Quartet",
+      "date": "2026-11-16",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "String Quartet No. 1 in C minor, Op. 51 No. 1",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202611161930"
     }
   ]
 }
