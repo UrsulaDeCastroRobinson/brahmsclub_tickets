@@ -152,6 +152,24 @@ function sectionDate(section, $, today, tomorrow) {
   return isToday ? today : tomorrow;
 }
 
+function addOneDay(dateParts) {
+  const d = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day + 1));
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+function resolveDateParts(parsed, today, tomorrow) {
+  if (!parsed) return null;
+  if (parsed.day === today.day && parsed.month === today.month) return today;
+  if (parsed.day === tomorrow.day && parsed.month === tomorrow.month) return tomorrow;
+  return { year: today.year, month: parsed.month, day: parsed.day };
+}
+
+function inferDateFromDay(day, today, tomorrow) {
+  if (day === today.day) return today;
+  if (day === tomorrow.day) return tomorrow;
+  return today;
+}
+
 function pushEvent(allEvents, extracted, dateParts) {
   if (!extracted || !dateParts) return;
   allEvents.push({
@@ -172,30 +190,114 @@ function parseBBCTideHTML(html, today, tomorrow) {
   const $ = cheerio.load(html);
   const allEvents = [];
 
-  // Strategy 1: BBC tide sections with local heading date context
-  const sections = $('section, article, div').filter((_, el) => {
-    const cls = ($(el).attr('class') || '').toLowerCase();
-    return cls.includes('tide') || cls.includes('wr-c-tide-extremes');
+  // Strategy 1: Semantic table parsing by header meanings
+  $('table').each((_, table) => {
+    const rows = $(table).find('tr');
+    if (rows.length === 0) return;
+
+    let headerIndex = -1;
+    let typeIdx = -1;
+    let timeIdx = -1;
+    let heightIdx = -1;
+
+    rows.each((rowIndex, row) => {
+      if (headerIndex !== -1) return;
+
+      const headers = $(row)
+        .find('th, td')
+        .map((__, cell) => normalizeText($(cell).text()).toLowerCase())
+        .get();
+      if (headers.length === 0) return;
+
+      headers.forEach((h, idx) => {
+        if (typeIdx === -1 && h.includes('type') && h.includes('tide')) typeIdx = idx;
+        if (timeIdx === -1 && h.includes('time')) timeIdx = idx;
+        if (heightIdx === -1 && h.includes('height')) heightIdx = idx;
+      });
+
+      if (typeIdx !== -1 && timeIdx !== -1) {
+        headerIndex = rowIndex;
+      } else {
+        typeIdx = -1;
+        timeIdx = -1;
+        heightIdx = -1;
+      }
+    });
+
+    if (headerIndex === -1) return;
+
+    const headingText = normalizeText(
+      `${$(table).find('caption').first().text()} ${$(table).prevAll('h1,h2,h3,h4,p').slice(0, 2).text()} ${$(table)
+        .closest('section, article, div')
+        .find('h1,h2,h3,h4')
+        .first()
+        .text()}`,
+    );
+    const parsedHeadingDate = parseDateHeading(headingText);
+    let currentDate = resolveDateParts(parsedHeadingDate, today, tomorrow) || today;
+    let previousMinutes = null;
+
+    rows.slice(headerIndex + 1).each((__, row) => {
+      const cells = $(row)
+        .find('th, td')
+        .map((___, cell) => normalizeText($(cell).text()))
+        .get();
+      if (cells.length === 0) return;
+
+      const typeText = cells[typeIdx] || '';
+      const timeText = cells[timeIdx] || '';
+      const heightText = heightIdx >= 0 ? cells[heightIdx] || '' : '';
+
+      const typeMatch = typeText.match(/\b(high|low)\b/i);
+      const timeMatch = timeText.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+      if (!typeMatch || !timeMatch) return;
+
+      const totalMinutes = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+      if (previousMinutes != null && totalMinutes < previousMinutes) {
+        currentDate = addOneDay(currentDate);
+      }
+      previousMinutes = totalMinutes;
+
+      const heightMatch = heightText.match(/(\d+(?:\.\d+)?)/);
+      pushEvent(
+        allEvents,
+        {
+          type: typeMatch[1].toLowerCase() === 'high' ? 'high' : 'low',
+          hours: parseInt(timeMatch[1], 10),
+          minutes: parseInt(timeMatch[2], 10),
+          heightM: heightMatch ? parseFloat(heightMatch[1]) : null,
+        },
+        currentDate,
+      );
+    });
   });
 
-  if (sections.length > 0) {
-    sections.each((_, section) => {
-      const dateParts = sectionDate(section, $, today, tomorrow);
-      if (!dateParts) return;
-
-      // Prefer row/list based parsing inside a dated section
-      $(section)
-        .find('tr, li, p, div')
-        .each((__, node) => {
-          const text = normalizeText($(node).text());
-          const extracted = extractEventFromText(text);
-          pushEvent(allEvents, extracted, dateParts);
-        });
+  if (allEvents.length === 0) {
+    // Strategy 2: BBC tide sections with local heading date context
+    const sections = $('section, article, div').filter((_, el) => {
+      const cls = ($(el).attr('class') || '').toLowerCase();
+      return cls.includes('tide') || cls.includes('wr-c-tide-extremes');
     });
+
+    if (sections.length > 0) {
+      sections.each((_, section) => {
+        const dateParts = sectionDate(section, $, today, tomorrow);
+        if (!dateParts) return;
+
+        // Prefer row/list based parsing inside a dated section
+        $(section)
+          .find('tr, li, p, div')
+          .each((__, node) => {
+            const text = normalizeText($(node).text());
+            const extracted = extractEventFromText(text);
+            pushEvent(allEvents, extracted, dateParts);
+          });
+      });
+    }
   }
 
   if (allEvents.length === 0) {
-    // Strategy 2: Generic table/list scan without section classes
+    // Strategy 3: Generic table/list scan without section classes
     $('table tr, li').each((_, node) => {
       const text = normalizeText($(node).text());
       const extracted = extractEventFromText(text);
@@ -207,24 +309,56 @@ function parseBBCTideHTML(html, today, tomorrow) {
   }
 
   if (allEvents.length === 0) {
-    // Strategy 3: Full text regex fallback
+    // Strategy 4: Parse summary cards like "Next High tide ... (Wed 15th 03:00 BST)"
     $('script, style, noscript, nav, header, footer').remove();
     const fullText = normalizeText($('body').text());
 
-    const pattern = /(high|low)(?:\s+tide)?\s+([01]?\d|2[0-3]):([0-5]\d)(?:\s*(?:bst|gmt))?(?:[^\d]{0,20}(\d+(?:\.\d+)?)\s*(?:m|metres?))?/gi;
-    let m;
-    while ((m = pattern.exec(fullText)) !== null) {
+    const nextPattern =
+      /next\s+(high|low)\s+tide[^()]*\(([a-z]{3})\s+(\d{1,2})(?:st|nd|rd|th)\s+([01]?\d|2[0-3]):([0-5]\d)\s+(bst|gmt)\)/gi;
+    let nextMatch;
+    while ((nextMatch = nextPattern.exec(fullText)) !== null) {
       pushEvent(
         allEvents,
         {
-          type: m[1].toLowerCase() === 'high' ? 'high' : 'low',
-          hours: parseInt(m[2], 10),
-          minutes: parseInt(m[3], 10),
-          heightM: m[4] != null ? parseFloat(m[4]) : null,
+          type: nextMatch[1].toLowerCase() === 'high' ? 'high' : 'low',
+          hours: parseInt(nextMatch[4], 10),
+          minutes: parseInt(nextMatch[5], 10),
+          heightM: null,
         },
-        today,
+        inferDateFromDay(parseInt(nextMatch[3], 10), today, tomorrow),
       );
     }
+  }
+
+  if (allEvents.length === 0) {
+    // Strategy 5: Full text regex fallback
+    $('script, style, noscript, nav, header, footer').remove();
+    const fullText = normalizeText($('body').text());
+
+    const patterns = [
+      /(high|low)(?:\s+tide)?\s+([01]?\d|2[0-3]):([0-5]\d)(?:\s*(?:bst|gmt))?(?:[^\d]{0,20}(\d+(?:\.\d+)?)\s*(?:m|metres?))?/gi,
+      /([01]?\d|2[0-3]):([0-5]\d)(?:\s*(?:bst|gmt))?\s+(high|low)(?:\s+tide)?(?:[^\d]{0,20}(\d+(?:\.\d+)?)(?:\s*(?:m|metres?))?)?/gi,
+    ];
+
+    patterns.forEach((pattern, idx) => {
+      let m;
+      while ((m = pattern.exec(fullText)) !== null) {
+        const type = idx === 0 ? m[1] : m[3];
+        const hours = idx === 0 ? m[2] : m[1];
+        const minutes = idx === 0 ? m[3] : m[2];
+        const height = idx === 0 ? m[4] : m[4];
+        pushEvent(
+          allEvents,
+          {
+            type: String(type).toLowerCase() === 'high' ? 'high' : 'low',
+            hours: parseInt(hours, 10),
+            minutes: parseInt(minutes, 10),
+            heightM: height != null ? parseFloat(height) : null,
+          },
+          today,
+        );
+      }
+    });
   }
 
   // Dedupe and sort by type+timeISO to avoid dropping alternating same-time entries
@@ -237,6 +371,12 @@ function parseBBCTideHTML(html, today, tomorrow) {
       seen.add(key);
       return true;
     });
+}
+
+function parserDiagnosticSnippet(html) {
+  const $ = cheerio.load(html);
+  $('script, style, noscript').remove();
+  return normalizeText($('body').text()).slice(0, 500);
 }
 
 // ─────────────────────────────── handler ──────────────────────────────────
@@ -262,16 +402,23 @@ export default async function handler(req, res) {
     const events = parseBBCTideHTML(html, today, tomorrow);
 
     if (events.length === 0) {
+      console.error('[tide api] parse failed after successful fetch', {
+        status: response.status,
+        url: response.url || BBC_TIDE_URL,
+        htmlBytes: html.length,
+        textSnippet: parserDiagnosticSnippet(html),
+      });
       throw new Error('No tide events parsed from BBC page');
     }
 
-    // Sort chronologically and deduplicate by timeISO
+    // Sort chronologically and deduplicate by event identity
     const seen = new Set();
     const uniqueEvents = events
       .sort((a, b) => a.timeISO.localeCompare(b.timeISO))
       .filter((e) => {
-        if (seen.has(e.timeISO)) return false;
-        seen.add(e.timeISO);
+        const key = `${e.type}|${e.timeISO}|${e.heightM ?? ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
         return true;
       });
 
