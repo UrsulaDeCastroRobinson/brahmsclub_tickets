@@ -103,7 +103,7 @@ export default function TidePage() {
       evts = e;
       clearInterval(tickRef.current);
       tickRef.current = setInterval(() => tick(evts), TICK_MS);
-      tick(e);
+      tick(evts);
     };
 
     fetchData().then((e) => {

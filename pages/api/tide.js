@@ -172,15 +172,15 @@ function parseBBCTideHTML(html, today, tomorrow) {
   $('script, style, noscript, nav, header, footer').remove();
   const fullText = $('body').text().replace(/\s+/g, ' ');
 
-  // Match patterns like "04:23" followed by "High tide" or "Low tide" + optional height
-  const pattern = /(\d{1,2}:\d{2})\s*(?:bst|gmt)?\s*(high\s+tide|low\s+tide)\s+(\d+\.?\d*)/gi;
+  // Match patterns like "04:23 BST High tide 6.8" — height is optional
+  const pattern = /(\d{1,2}:\d{2})\s*(?:bst|gmt)?\s*(high\s+tide|low\s+tide)(?:\s+(\d+\.?\d*))?/gi;
   let m;
   while ((m = pattern.exec(fullText)) !== null) {
     const [h, min] = m[1].split(':').map(Number);
     allEvents.push({
       type: /high/i.test(m[2]) ? 'high' : 'low',
       timeISO: londonTimeToUTC(today.year, today.month, today.day, h, min).toISOString(),
-      heightM: parseFloat(m[3]),
+      heightM: m[3] != null ? parseFloat(m[3]) : null,
     });
   }
 
