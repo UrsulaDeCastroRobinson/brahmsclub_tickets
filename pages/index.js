@@ -17,6 +17,7 @@ const description = (
       We are honoured to bring the first complete Brahms chamber works cycle to the residents of Limehouse and the wider Docklands area with generous support of The Royal Foundation of St Katherine.
     </div>
     <Link className="schedule-link" href="/schedule">View Event Schedule</Link>
+    <Link className="schedule-link" href="/tide" style={{ marginTop: '0.7em' }}>Thames Tide</Link>
     <div className="club-description">
       <br />
       Contact: contact@brahmsclub.org

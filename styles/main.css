@@ -468,3 +468,107 @@ body, html, #root, .responsive-container {
   color: #fff;
   text-decoration: underline;
 }
+
+/* ─── Thames Tide Page ─────────────────────────────────────────────────────── */
+
+.tide-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #0d1117;
+  font-family: 'Lora', serif;
+  color: #fff;
+}
+
+/* Water fill layer — rises from the bottom */
+.tide-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #1a6b8a 0%, #0e3d55 100%);
+  transition: height 1s linear;
+  will-change: height;
+}
+
+/* Content sits above the fill */
+.tide-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 0.4em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tide-arrow {
+  font-size: clamp(5rem, 20vw, 14rem);
+  line-height: 1;
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+}
+
+.tide-arrow--neutral {
+  opacity: 0.35;
+}
+
+.tide-percent {
+  font-size: clamp(1.4rem, 5vw, 3rem);
+  margin: 0;
+  opacity: 0.8;
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.tide-error {
+  font-size: 1.1rem;
+  opacity: 0.6;
+  text-align: center;
+  margin: 0.5em 1em;
+}
+
+.tide-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Footer strip */
+.tide-footer {
+  position: absolute;
+  z-index: 3;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em 1.4em;
+  padding: 0.7em 1em;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: clamp(0.7rem, 1.8vw, 0.88rem);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Montserrat', 'Arial', sans-serif;
+}
+
+.tide-footer__next {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tide-footer__source,
+.tide-footer__home {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.tide-footer__source:hover,
+.tide-footer__home:hover {
+  color: #fff;
+}
