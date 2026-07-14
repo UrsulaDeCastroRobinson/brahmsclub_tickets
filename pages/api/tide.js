@@ -153,7 +153,8 @@ function sectionDate(section, $, today, tomorrow) {
 }
 
 function addOneDay(dateParts) {
-  const d = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day + 1));
+  const d = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day));
+  d.setUTCDate(d.getUTCDate() + 1);
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
@@ -164,9 +165,26 @@ function resolveDateParts(parsed, today, tomorrow) {
   return { year: today.year, month: parsed.month, day: parsed.day };
 }
 
-function inferDateFromDay(day, today, tomorrow) {
-  if (day === today.day) return today;
-  if (day === tomorrow.day) return tomorrow;
+function getLondonWeekdayAbbrev(dateParts) {
+  const d = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day, 12, 0, 0));
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short' }).format(d).toLowerCase();
+}
+
+function inferDateFromDay(day, weekdayAbbrev, today, tomorrow) {
+  const normalizedWeekday = String(weekdayAbbrev || '').toLowerCase().slice(0, 3);
+  const candidates = [today, tomorrow];
+
+  const exact = candidates.find(
+    (candidate) => candidate.day === day && getLondonWeekdayAbbrev(candidate).startsWith(normalizedWeekday),
+  );
+  if (exact) return exact;
+
+  const dayOnly = candidates.find((candidate) => candidate.day === day);
+  if (dayOnly) return dayOnly;
+
+  const weekdayOnly = candidates.find((candidate) => getLondonWeekdayAbbrev(candidate).startsWith(normalizedWeekday));
+  if (weekdayOnly) return weekdayOnly;
+
   return today;
 }
 
@@ -325,7 +343,7 @@ function parseBBCTideHTML(html, today, tomorrow) {
           minutes: parseInt(nextMatch[5], 10),
           heightM: null,
         },
-        inferDateFromDay(parseInt(nextMatch[3], 10), today, tomorrow),
+        inferDateFromDay(parseInt(nextMatch[3], 10), nextMatch[2], today, tomorrow),
       );
     }
   }
@@ -346,7 +364,7 @@ function parseBBCTideHTML(html, today, tomorrow) {
         const type = idx === 0 ? m[1] : m[3];
         const hours = idx === 0 ? m[2] : m[1];
         const minutes = idx === 0 ? m[3] : m[2];
-        const height = idx === 0 ? m[4] : m[4];
+        const height = m[4];
         pushEvent(
           allEvents,
           {
