@@ -20,7 +20,7 @@ let cache = null;
 let cacheTime = 0;
 const CACHE_TTL_MS = 20 * 60 * 1000; // 20 minutes
 
-// ─────────────────────────────── date helpers ───────────────────────────────
+// ─────────────────────────────── date helpers ─────────────────────────────
 
 /** Return the UTC offset in whole hours that London uses on a given date. */
 function getLondonOffsetHours(date) {
@@ -69,18 +69,37 @@ function getLondonDates() {
   return { today, tomorrow };
 }
 
-// ─────────────────────────────── BBC parser ─────────────────────────────────
+// ─────────────────────────────── BBC parser ───────────────────────────────
 
 const MONTH_MAP = {
-  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
-  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
-  jan: 1, feb: 2, mar: 3, apr: 4, jun: 6, jul: 7, aug: 8,
-  sep: 9, oct: 10, nov: 11, dec: 12,
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+  jan: 1,
+  feb: 2,
+  mar: 3,
+  apr: 4,
+  jun: 6,
+  jul: 7,
+  aug: 8,
+  sep: 9,
+  oct: 10,
+  nov: 11,
+  dec: 12,
 };
 
 /**
  * Try to parse a date like "Monday 14 July" or "Today, Tuesday 15 July 2025"
- * or "14 Jul" from a string.  Returns { day, month } (1-based) or null.
+ * or "14 Jul" from a string. Returns { day, month } (1-based) or null.
  */
 function parseDateHeading(text) {
   const clean = text.toLowerCase().replace(/today,?\s*/i, '').trim();
@@ -92,102 +111,135 @@ function parseDateHeading(text) {
   return month ? { day, month } : null;
 }
 
+function normalizeText(text) {
+  return String(text || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[↑⇧]/g, 'high')
+    .replace(/[↓⇩]/g, 'low')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractEventFromText(text) {
+  const clean = normalizeText(text).toLowerCase();
+
+  const typeMatch = clean.match(/\b(high|low)\b(?:\s+tide)?/i);
+  const timeMatch = clean.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  const heightMatch = clean.match(/\b(\d+(?:\.\d+)?)\s*(m|metres?)\b/i);
+
+  if (!typeMatch || !timeMatch) return null;
+
+  return {
+    type: typeMatch[1].toLowerCase() === 'high' ? 'high' : 'low',
+    hours: parseInt(timeMatch[1], 10),
+    minutes: parseInt(timeMatch[2], 10),
+    heightM: heightMatch ? parseFloat(heightMatch[1]) : null,
+  };
+}
+
+function sectionDate(section, $, today, tomorrow) {
+  const headingText = normalizeText(
+    $(section).find('[class*="date"], [class*="heading"], h1, h2, h3, h4').first().text(),
+  );
+  const parsed = parseDateHeading(headingText);
+  if (!parsed) return null;
+
+  const isToday = parsed.day === today.day && parsed.month === today.month;
+  const isTomorrow = parsed.day === tomorrow.day && parsed.month === tomorrow.month;
+  if (!isToday && !isTomorrow) return null;
+
+  return isToday ? today : tomorrow;
+}
+
+function pushEvent(allEvents, extracted, dateParts) {
+  if (!extracted || !dateParts) return;
+  allEvents.push({
+    type: extracted.type,
+    timeISO: londonTimeToUTC(
+      dateParts.year,
+      dateParts.month,
+      dateParts.day,
+      extracted.hours,
+      extracted.minutes,
+    ).toISOString(),
+    heightM: extracted.heightM,
+  });
+}
+
 /** Extract all tide events from the BBC tide HTML. */
 function parseBBCTideHTML(html, today, tomorrow) {
   const $ = cheerio.load(html);
   const allEvents = [];
 
-  // ── Strategy 1: BBC "wr-c-tide-extremes" component structure ──
-  // Sections are like <section class="wr-c-tide-extremes"> with date heading + table
-  const sections = $(
-    'section.wr-c-tide-extremes, div.wr-c-tide-extremes, article.wr-c-tide-extremes',
-  );
+  // Strategy 1: BBC tide sections with local heading date context
+  const sections = $('section, article, div').filter((_, el) => {
+    const cls = ($(el).attr('class') || '').toLowerCase();
+    return cls.includes('tide') || cls.includes('wr-c-tide-extremes');
+  });
 
   if (sections.length > 0) {
     sections.each((_, section) => {
-      const headingText =
-        $(section).find('[class*="date"], [class*="heading"], h2, h3').first().text().trim();
-      const parsed = parseDateHeading(headingText);
-      if (!parsed) return;
+      const dateParts = sectionDate(section, $, today, tomorrow);
+      if (!dateParts) return;
 
-      const isToday = parsed.day === today.day && parsed.month === today.month;
-      const isTomorrow = parsed.day === tomorrow.day && parsed.month === tomorrow.month;
-      if (!isToday && !isTomorrow) return;
-
-      const year = isToday ? today.year : tomorrow.year;
-      const sectionDay = isToday ? today.day : tomorrow.day;
-
+      // Prefer row/list based parsing inside a dated section
       $(section)
-        .find('tr')
-        .each((_, row) => {
-          const cells = $(row)
-            .find('td')
-            .map((_, td) => $(td).text().trim())
-            .get();
-          const timeCell = cells.find((c) => /^\d{1,2}:\d{2}$/.test(c));
-          const typeCell = cells.find((c) => /high|low/i.test(c));
-          if (!timeCell || !typeCell) return;
-          const heightCell = cells.find((c) => /^\d+(\.\d+)?$/.test(c.replace('m', '').trim()));
-          const [h, min] = timeCell.split(':').map(Number);
-          allEvents.push({
-            type: /high/i.test(typeCell) ? 'high' : 'low',
-            timeISO: londonTimeToUTC(year, parsed.month, sectionDay, h, min).toISOString(),
-            heightM: heightCell ? parseFloat(heightCell.replace('m', '')) : null,
-          });
+        .find('tr, li, p, div')
+        .each((__, node) => {
+          const text = normalizeText($(node).text());
+          const extracted = extractEventFromText(text);
+          pushEvent(allEvents, extracted, dateParts);
         });
-    });
-
-    if (allEvents.length > 0) return allEvents;
-  }
-
-  // ── Strategy 2: Any table rows that look like tide data ──
-  // Walk all tables; each row has cells with time, type and optionally height
-  $('table').each((_, table) => {
-    $(table)
-      .find('tr')
-      .each((_, row) => {
-        const cells = $(row)
-          .find('td')
-          .map((_, td) => $(td).text().trim())
-          .get();
-        const timeCell = cells.find((c) => /^\d{1,2}:\d{2}(\s*(bst|gmt))?$/i.test(c));
-        const typeCell = cells.find((c) => /\b(high|low)\s+tide\b/i.test(c));
-        if (!timeCell || !typeCell) return;
-        const cleanTime = timeCell.replace(/\s*(bst|gmt)/i, '');
-        const [h, min] = cleanTime.split(':').map(Number);
-        const heightCell = cells.find((c) => /^\d+(\.\d+)?\s*m?$/.test(c.trim()));
-        // Use today's date (first pass – good enough for current tide computation)
-        allEvents.push({
-          type: /high/i.test(typeCell) ? 'high' : 'low',
-          timeISO: londonTimeToUTC(today.year, today.month, today.day, h, min).toISOString(),
-          heightM: heightCell ? parseFloat(heightCell) : null,
-        });
-      });
-  });
-
-  if (allEvents.length > 0) return allEvents;
-
-  // ── Strategy 3: Regex over full visible text ──
-  // Remove noise, then search for lines like "04:23 BST  High tide  6.8"
-  $('script, style, noscript, nav, header, footer').remove();
-  const fullText = $('body').text().replace(/\s+/g, ' ');
-
-  // Match patterns like "04:23 BST High tide 6.8" — height is optional
-  const pattern = /(\d{1,2}:\d{2})\s*(?:bst|gmt)?\s*(high\s+tide|low\s+tide)(?:\s+(\d+\.?\d*))?/gi;
-  let m;
-  while ((m = pattern.exec(fullText)) !== null) {
-    const [h, min] = m[1].split(':').map(Number);
-    allEvents.push({
-      type: /high/i.test(m[2]) ? 'high' : 'low',
-      timeISO: londonTimeToUTC(today.year, today.month, today.day, h, min).toISOString(),
-      heightM: m[3] != null ? parseFloat(m[3]) : null,
     });
   }
 
-  return allEvents;
+  if (allEvents.length === 0) {
+    // Strategy 2: Generic table/list scan without section classes
+    $('table tr, li').each((_, node) => {
+      const text = normalizeText($(node).text());
+      const extracted = extractEventFromText(text);
+      if (!extracted) return;
+
+      // If no explicit date context, assign to today (sufficient for interpolation window)
+      pushEvent(allEvents, extracted, today);
+    });
+  }
+
+  if (allEvents.length === 0) {
+    // Strategy 3: Full text regex fallback
+    $('script, style, noscript, nav, header, footer').remove();
+    const fullText = normalizeText($('body').text());
+
+    const pattern = /(high|low)(?:\s+tide)?\s+([01]?\d|2[0-3]):([0-5]\d)(?:\s*(?:bst|gmt))?(?:[^\d]{0,20}(\d+(?:\.\d+)?)\s*(?:m|metres?))?/gi;
+    let m;
+    while ((m = pattern.exec(fullText)) !== null) {
+      pushEvent(
+        allEvents,
+        {
+          type: m[1].toLowerCase() === 'high' ? 'high' : 'low',
+          hours: parseInt(m[2], 10),
+          minutes: parseInt(m[3], 10),
+          heightM: m[4] != null ? parseFloat(m[4]) : null,
+        },
+        today,
+      );
+    }
+  }
+
+  // Dedupe and sort by type+timeISO to avoid dropping alternating same-time entries
+  const seen = new Set();
+  return allEvents
+    .sort((a, b) => a.timeISO.localeCompare(b.timeISO))
+    .filter((e) => {
+      const key = `${e.type}|${e.timeISO}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
-// ─────────────────────────────── handler ────────────────────────────────────
+// ─────────────────────────────── handler ──────────────────────────────────
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
