@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-27T07:11:22.426Z",
-  "month": "July 2026–January 2027",
+  "generatedAt": "2026-08-03T07:10:32.364Z",
+  "month": "August 2026–February 2027",
   "items": [
     {
       "title": "Barry Douglas piano",
@@ -81,6 +81,38 @@
       "source": "Wigmore Hall",
       "programme": "String Quartet No. 1 in C minor, Op. 51 No. 1",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202611161930"
+    },
+    {
+      "title": "Alim Beisembayev piano",
+      "date": "2026-12-15",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Variations and Fugue on a Theme of Handel Op. 24",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202612151930"
+    },
+    {
+      "title": "Fatma Said soprano; Malcolm Martineau piano",
+      "date": "2026-12-17",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Lerchengesang Op. 70 No. 2 / Immer leiser wird mein Schlummer Op. 105 No. 2 / Ophelia-Lieder WoO. 22 / Da unten im Tale WoO. 33 No. 6",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202612171930"
+    },
+    {
+      "title": "Leonore Piano Trio",
+      "date": "2026-12-27",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Piano Trio No. 2 in C major, Op. 87",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202612271930"
+    },
+    {
+      "title": "Pavel Kolesnikov piano",
+      "date": "2026-12-30",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Selection of Klavierstücke and Intermezzi",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202612301930"
     }
   ]
 }
