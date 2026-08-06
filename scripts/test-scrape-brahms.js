@@ -11,8 +11,10 @@ const {
   extractSection,
   parseEventDateFromUrl,
   containsBrahms,
-  isWithinNextMonth,
-  getNextMonthDateRange,
+  isWithinSixMonthRange,
+  getSixMonthDateRange,
+  getTargetRangeEndDateString,
+  getLatestEventDate,
   extractWigmoreEvent,
   collectWigmoreEventLinksStatic,
 } = require("./scrape-brahms");
@@ -183,7 +185,7 @@ console.log("\nextractWigmoreEvent");
 // isWithinNextMonth (date-range helper)
 // ---------------------------------------------------------------------------
 
-console.log("\nisWithinNextMonth");
+console.log("\nisWithinSixMonthRange");
 
 {
   const scrape = require("./scrape-brahms");
@@ -195,7 +197,7 @@ console.log("\nisWithinNextMonth");
     String(now.getUTCMonth() + 1).padStart(2, "0"),
     String(now.getUTCDate()).padStart(2, "0"),
   ].join("-");
-  assert("isWithinNextMonth includes today", scrape.isWithinNextMonth(todayStr));
+  assert("isWithinSixMonthRange includes today", scrape.isWithinSixMonthRange(todayStr));
 
   // A date in the next calendar month should be within the range
   const nextMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 15));
@@ -204,28 +206,37 @@ console.log("\nisWithinNextMonth");
     String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0"),
     String(nextMonthDate.getUTCDate()).padStart(2, "0"),
   ].join("-");
-  assert("isWithinNextMonth includes a date in next calendar month", scrape.isWithinNextMonth(nextMonthStr));
+  assert("isWithinSixMonthRange includes a date in next calendar month", scrape.isWithinSixMonthRange(nextMonthStr));
 
-  // The last day of next month should be within the range
-  const { end } = scrape.getNextMonthDateRange();
+  // A date three months ahead should be within the six-month range
+  const threeMonthsAhead = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 3, 15));
+  const threeMonthsStr = [
+    threeMonthsAhead.getUTCFullYear(),
+    String(threeMonthsAhead.getUTCMonth() + 1).padStart(2, "0"),
+    String(threeMonthsAhead.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  assert("isWithinSixMonthRange includes a date three months ahead", scrape.isWithinSixMonthRange(threeMonthsStr));
+
+  // The last day of the six-month range should be within the range
+  const { end } = scrape.getSixMonthDateRange();
   const endStr = [
     end.getUTCFullYear(),
     String(end.getUTCMonth() + 1).padStart(2, "0"),
     String(end.getUTCDate()).padStart(2, "0"),
   ].join("-");
-  assert("isWithinNextMonth includes the last day of next month", scrape.isWithinNextMonth(endStr));
+  assert("isWithinSixMonthRange includes the last day of the six-month range", scrape.isWithinSixMonthRange(endStr));
 
-  // A date from two months ahead should be out of range
-  const twoMonthsAhead = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1));
-  const twoMonthsStr = [
-    twoMonthsAhead.getUTCFullYear(),
-    String(twoMonthsAhead.getUTCMonth() + 1).padStart(2, "0"),
-    String(twoMonthsAhead.getUTCDate()).padStart(2, "0"),
+  // A date seven months ahead should be out of range
+  const sevenMonthsAhead = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 7, 1));
+  const sevenMonthsStr = [
+    sevenMonthsAhead.getUTCFullYear(),
+    String(sevenMonthsAhead.getUTCMonth() + 1).padStart(2, "0"),
+    String(sevenMonthsAhead.getUTCDate()).padStart(2, "0"),
   ].join("-");
-  assert("isWithinNextMonth excludes a date two months ahead", !scrape.isWithinNextMonth(twoMonthsStr));
+  assert("isWithinSixMonthRange excludes a date seven months ahead", !scrape.isWithinSixMonthRange(sevenMonthsStr));
 
   // A clearly past date should be out of range
-  assert("isWithinNextMonth excludes a past date", !scrape.isWithinNextMonth("2020-01-01"));
+  assert("isWithinSixMonthRange excludes a past date", !scrape.isWithinSixMonthRange("2020-01-01"));
 }
 
 // ---------------------------------------------------------------------------
@@ -268,12 +279,50 @@ console.log("\ncollectWigmoreEventLinksStatic");
     links.some((l) => l.includes(pastEventSlug))
   );
   assert(
-    "static fallback: isWithinNextMonth filters next-month event in",
-    scrape.isWithinNextMonth(scrape.parseEventDateFromUrl(nextMonthEventUrl))
+    "static fallback: isWithinSixMonthRange filters next-month event in",
+    scrape.isWithinSixMonthRange(scrape.parseEventDateFromUrl(nextMonthEventUrl))
   );
   assert(
-    "static fallback: isWithinNextMonth filters past event out",
-    !scrape.isWithinNextMonth(scrape.parseEventDateFromUrl(`https://www.wigmore-hall.org.uk/whats-on/${pastEventSlug}`))
+    "static fallback: isWithinSixMonthRange filters past event out",
+    !scrape.isWithinSixMonthRange(scrape.parseEventDateFromUrl(`https://www.wigmore-hall.org.uk/whats-on/${pastEventSlug}`))
+  );
+}
+
+// ---------------------------------------------------------------------------
+// getTargetRangeEndDateString
+// ---------------------------------------------------------------------------
+
+console.log("\ngetTargetRangeEndDateString");
+
+{
+  const scrape = require("./scrape-brahms");
+  const result = scrape.getTargetRangeEndDateString();
+  assert("returns a YYYY-MM-DD string", /^\d{4}-\d{2}-\d{2}$/.test(result));
+  // The end date should be in the future (at least 5 months from today)
+  const now = new Date();
+  const fiveMonthsFromNow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 5, 1));
+  assert("end date is at least 5 months away", result >= fiveMonthsFromNow.toISOString().slice(0, 10));
+}
+
+// ---------------------------------------------------------------------------
+// getLatestEventDate
+// ---------------------------------------------------------------------------
+
+console.log("\ngetLatestEventDate");
+
+{
+  const scrape = require("./scrape-brahms");
+  const urls = new Set([
+    "https://www.wigmore-hall.org.uk/whats-on/202608151930",
+    "https://www.wigmore-hall.org.uk/whats-on/202607221200",
+    "https://www.wigmore-hall.org.uk/whats-on/202610011930",
+    "https://www.wigmore-hall.org.uk/whats-on/202606301930",
+  ]);
+  assert("returns the latest date from a set of URLs", scrape.getLatestEventDate(urls) === "2026-10-01");
+  assert("returns empty string for an empty set", scrape.getLatestEventDate(new Set()) === "");
+  assert(
+    "returns empty string for a set of non-event URLs",
+    scrape.getLatestEventDate(new Set(["https://www.wigmore-hall.org.uk/about"])) === ""
   );
 }
 
