@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T06:15:57.184Z",
+  "generatedAt": "2026-09-14T06:16:47.634Z",
   "month": "September 2026–March 2027",
   "items": [
     {
@@ -105,6 +105,30 @@
       "source": "Wigmore Hall",
       "programme": "Selection of Klavierstücke and Intermezzi",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202612301930"
+    },
+    {
+      "title": "Peasmarsh Chamber Music Festival",
+      "date": "2027-01-10",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Piano Quintet in F minor, Op. 34",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202701101930"
+    },
+    {
+      "title": "Bruno Philippe cello; Tanguy de Williencourt piano",
+      "date": "2027-01-11",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202701111300"
+    },
+    {
+      "title": "Llŷr Williams piano",
+      "date": "2027-01-11",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Variations and Fugue on a Theme of Handel Op. 24",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202701111930"
     }
   ]
 }
