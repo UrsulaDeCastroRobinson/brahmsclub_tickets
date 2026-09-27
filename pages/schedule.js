@@ -54,16 +54,39 @@ function parseCsv(text) {
   return rows;
 }
 
+function isLikelyDateText(value) {
+  if (!value) return false;
+  return !Number.isNaN(Date.parse(value));
+}
+
 function extractConcerts(rows) {
   if (!rows.length) return [];
 
   const [header, ...dataRows] = rows;
   const dateColumnIndex = header.findIndex(cell => {
     const normalized = cell.trim().toLowerCase();
-    return normalized === "date" || normalized === "concert date" || normalized === "concert dates";
+    return (
+      normalized === "date" ||
+      normalized === "concert date" ||
+      normalized === "concert dates" ||
+      normalized === "date of concert"
+    );
   });
-  const rowsToUse = dateColumnIndex >= 0 ? dataRows : rows;
-  const dateIndex = dateColumnIndex >= 0 ? dateColumnIndex : 0;
+  let rowsToUse = dataRows;
+  let dateIndex = dateColumnIndex;
+
+  if (dateColumnIndex < 0) {
+    const firstColumnValues = rows
+      .map(row => (row[0] || "").trim())
+      .filter(Boolean);
+
+    if (firstColumnValues.length > 0 && firstColumnValues.every(isLikelyDateText)) {
+      rowsToUse = rows;
+      dateIndex = 0;
+    } else {
+      return [];
+    }
+  }
 
   return rowsToUse
     .map(row => (row[dateIndex] || "").trim())
@@ -119,7 +142,7 @@ export default function Schedule({ concerts, hasLoadError }) {
           rel="noopener noreferrer"
           style={{ display: "inline-block", marginTop: "0.75em", textDecoration: "none" }}
         >
-          View Repertoire and Performers
+          View Repertoire and Performers (opens in new tab)
         </a>
 
         {hasLoadError && (
