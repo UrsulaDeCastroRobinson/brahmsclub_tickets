@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const SCHEDULE_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEP4_qu1WFQ9JqiKTu_ILKCWmxbzZXL1RO5rOZSYBGjLs0lHgFFz0T4yWJlh7rmagQsLjHqPNV2wTd/pub?output=csv";
-const SCHEDULE_SHEET_URL = SCHEDULE_CSV_URL.replace("/pub?output=csv", "/pubhtml");
+const DISPLAY_CUTOFF = new Date(2027, 3, 18);
 
 function normalizeHeader(value = "") {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
@@ -70,37 +70,67 @@ function getCellValue(row, index) {
   return (row[index] || "").trim();
 }
 
+function parseDate(value) {
+  const trimmedValue = value.trim();
+  const dayFirstMatch = trimmedValue.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/);
+
+  if (dayFirstMatch) {
+    const [, day, month, year] = dayFirstMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(trimmedValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function splitCellValues(value) {
+  return value
+    .split(/\r?\n|\s*;\s*/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
 function extractConcerts(rows) {
   if (!rows.length) return [];
 
   const [header, ...dataRows] = rows;
-  const normalizedHeader = header.map(normalizeHeader);
+  const dateIndex = getColumnIndex(header, ["date", "concert date", "concert dates"]);
+  const repertoireIndex = getColumnIndex(header, ["repertoire", "work"]);
+  const performersIndex = getColumnIndex(header, ["performer", "performers", "artist", "artists"]);
+  const resolvedDateIndex = dateIndex >= 0 ? dateIndex : 0;
+  const resolvedRepertoireIndex = repertoireIndex >= 0 ? repertoireIndex : 1;
+  const resolvedPerformersIndex = performersIndex >= 0 ? performersIndex : 2;
+  const groupedConcerts = new Map();
+  let currentDate = "";
 
-  const dateIndex = getColumnIndex(header, ["date", "concert date", "concert dates"]) >= 0
-    ? getColumnIndex(header, ["date", "concert date", "concert dates"])
-    : 0;
-
-  const repertoireIndex = getColumnIndex(header, ["repertoire", "work"]) >= 0
-    ? getColumnIndex(header, ["repertoire", "work"])
-    : Math.min(1, Math.max(0, normalizedHeader.length - 1));
-
-  const performersIndex = getColumnIndex(header, ["performer", "performers", "artist", "artists"]) >= 0
-    ? getColumnIndex(header, ["performer", "performers", "artist", "artists"])
-    : Math.min(2, Math.max(0, normalizedHeader.length - 1));
-
-  return dataRows
+  dataRows
     .filter(row => row.some(cell => (cell || "").trim() !== ""))
-    .map(row => {
-      const date = getCellValue(row, dateIndex) || "TBD";
-      const repertoire = getCellValue(row, repertoireIndex) || "TBD";
-      const performers = getCellValue(row, performersIndex) || "TBD";
+    .forEach(row => {
+      const rowDate = getCellValue(row, resolvedDateIndex);
+      if (rowDate) currentDate = rowDate;
+      if (!currentDate) return;
 
-      return {
-        date,
-        repertoire,
-        performers,
+      const parsedDate = parseDate(currentDate);
+      if (!parsedDate || parsedDate > DISPLAY_CUTOFF) return;
+
+      const dateKey = `${parsedDate.getFullYear()}-${parsedDate.getMonth()}-${parsedDate.getDate()}`;
+      const concert = groupedConcerts.get(dateKey) || {
+        date: currentDate,
+        dateKey,
+        repertoire: [],
+        performers: [],
       };
+
+      concert.repertoire.push(...splitCellValues(getCellValue(row, resolvedRepertoireIndex)));
+      concert.performers.push(...splitCellValues(getCellValue(row, resolvedPerformersIndex)));
+      groupedConcerts.set(dateKey, concert);
     });
+
+  return Array.from(groupedConcerts.values()).map(concert => ({
+    ...concert,
+    repertoire: concert.repertoire.length ? [...new Set(concert.repertoire)] : ["TBD"],
+    performers: concert.performers.length ? [...new Set(concert.performers)] : ["TBD"],
+  }));
 }
 
 export async function getStaticProps() {
@@ -138,25 +168,9 @@ export default function Schedule({ concerts, hasLoadError }) {
         <h1 className="club-title">Concert Schedule</h1>
         <Link className="back-link" href="/">← Back to Home</Link>
 
-        <p className="club-description">
-          Concert details are synced from our published Google Sheet. View the sheet
-          for the full programme details.
-        </p>
-
-        <a
-          className="book-btn"
-          href={SCHEDULE_SHEET_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-block", marginTop: "0.75em", textDecoration: "none" }}
-        >
-          View Google Sheet
-        </a>
-
         {hasLoadError && (
           <p className="club-description" style={{ marginTop: "1em" }}>
-            We could not load the latest concert details right now. Please use the
-            Google Sheet link above.
+            We could not load the latest concert details right now. Please try again later.
           </p>
         )}
 
@@ -172,16 +186,30 @@ export default function Schedule({ concerts, hasLoadError }) {
             </thead>
             <tbody>
               {concerts.length > 0 ? (
-                concerts.map(({ date, repertoire, performers }, index) => (
-                  <tr key={`${date}-${repertoire}-${performers}-${index}`}>
-                    <td>{date || "TBD"}</td>
-                    <td>{repertoire || "TBD"}</td>
-                    <td>{performers || "TBD"}</td>
+                concerts.map(({ date, dateKey, repertoire, performers }) => (
+                  <tr key={dateKey}>
+                    <td>{date} 2pm</td>
+                    <td>
+                      {repertoire.map((piece, index) => (
+                        <React.Fragment key={`${piece}-${index}`}>
+                          {index > 0 && <br />}
+                          {piece}
+                        </React.Fragment>
+                      ))}
+                    </td>
+                    <td>
+                      {performers.map((performer, index) => (
+                        <React.Fragment key={`${performer}-${index}`}>
+                          {index > 0 && <br />}
+                          {performer}
+                        </React.Fragment>
+                      ))}
+                    </td>
                     <td>
                       <Link
                         href={{
                           pathname: "/booking",
-                          query: { date: date || "TBD" }
+                          query: { date }
                         }}
                         className="book-btn"
                         style={{ display: "inline-block", textDecoration: "none" }}
@@ -193,7 +221,7 @@ export default function Schedule({ concerts, hasLoadError }) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4}>No concert details are available right now. Please check the sheet link above.</td>
+                  <td colSpan={4}>No concert details are available right now.</td>
                 </tr>
               )}
             </tbody>
