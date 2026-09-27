@@ -6,6 +6,10 @@ const SCHEDULE_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEP4_qu1WFQ9JqiKTu_ILKCWmxbzZXL1RO5rOZSYBGjLs0lHgFFz0T4yWJlh7rmagQsLjHqPNV2wTd/pub?output=csv";
 const SCHEDULE_SHEET_URL = SCHEDULE_CSV_URL.replace("/pub?output=csv", "/pubhtml");
 
+function normalizeHeader(value = "") {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -54,44 +58,49 @@ function parseCsv(text) {
   return rows;
 }
 
-function isLikelyDateText(value) {
-  if (!value) return false;
-  return !Number.isNaN(Date.parse(value));
+function getColumnIndex(header, keywords) {
+  return header.findIndex(cell => {
+    const normalized = normalizeHeader(cell);
+    return keywords.some(keyword => normalized.includes(keyword));
+  });
+}
+
+function getCellValue(row, index) {
+  if (index < 0 || index >= row.length) return "";
+  return (row[index] || "").trim();
 }
 
 function extractConcerts(rows) {
   if (!rows.length) return [];
 
   const [header, ...dataRows] = rows;
-  const dateColumnIndex = header.findIndex(cell => {
-    const normalized = cell.trim().toLowerCase();
-    return (
-      normalized === "date" ||
-      normalized === "concert date" ||
-      normalized === "concert dates" ||
-      normalized === "date of concert"
-    );
-  });
-  let rowsToUse = dataRows;
-  let dateIndex = dateColumnIndex;
+  const normalizedHeader = header.map(normalizeHeader);
 
-  if (dateColumnIndex < 0) {
-    const firstColumnValues = rows
-      .map(row => (row[0] || "").trim())
-      .filter(Boolean);
+  const dateIndex = getColumnIndex(header, ["date", "concert date", "concert dates"]) >= 0
+    ? getColumnIndex(header, ["date", "concert date", "concert dates"])
+    : 0;
 
-    if (firstColumnValues.length > 0 && firstColumnValues.every(isLikelyDateText)) {
-      rowsToUse = rows;
-      dateIndex = 0;
-    } else {
-      return [];
-    }
-  }
+  const repertoireIndex = getColumnIndex(header, ["repertoire", "work"]) >= 0
+    ? getColumnIndex(header, ["repertoire", "work"])
+    : Math.min(1, Math.max(0, normalizedHeader.length - 1));
 
-  return rowsToUse
-    .map(row => (row[dateIndex] || "").trim())
-    .filter(Boolean)
-    .map(date => ({ date }));
+  const performersIndex = getColumnIndex(header, ["performer", "performers", "artist", "artists"]) >= 0
+    ? getColumnIndex(header, ["performer", "performers", "artist", "artists"])
+    : Math.min(2, Math.max(0, normalizedHeader.length - 1));
+
+  return dataRows
+    .filter(row => row.some(cell => (cell || "").trim() !== ""))
+    .map(row => {
+      const date = getCellValue(row, dateIndex) || "TBD";
+      const repertoire = getCellValue(row, repertoireIndex) || "TBD";
+      const performers = getCellValue(row, performersIndex) || "TBD";
+
+      return {
+        date,
+        repertoire,
+        performers,
+      };
+    });
 }
 
 export async function getStaticProps() {
@@ -123,7 +132,6 @@ export async function getStaticProps() {
 }
 
 export default function Schedule({ concerts, hasLoadError }) {
-
   return (
     <ResponsiveContainer>
       <div className="schedule-root">
@@ -131,8 +139,8 @@ export default function Schedule({ concerts, hasLoadError }) {
         <Link className="back-link" href="/">← Back to Home</Link>
 
         <p className="club-description">
-          Concert dates are synced from our published Google Sheet. View the sheet
-          for full repertoire and performer details.
+          Concert details are synced from our published Google Sheet. View the sheet
+          for the full programme details.
         </p>
 
         <a
@@ -142,12 +150,12 @@ export default function Schedule({ concerts, hasLoadError }) {
           rel="noopener noreferrer"
           style={{ display: "inline-block", marginTop: "0.75em", textDecoration: "none" }}
         >
-          View Repertoire and Performers (opens in new tab)
+          View Google Sheet
         </a>
 
         {hasLoadError && (
           <p className="club-description" style={{ marginTop: "1em" }}>
-            We could not load the latest concert dates right now. Please use the
+            We could not load the latest concert details right now. Please use the
             Google Sheet link above.
           </p>
         )}
@@ -156,20 +164,24 @@ export default function Schedule({ concerts, hasLoadError }) {
           <table className="schedule-table">
             <thead>
               <tr>
-                <th>Concert Date</th>
+                <th>Date of Concert</th>
+                <th>Name of Repertoire</th>
+                <th>Name of Performers</th>
                 <th>Book Tickets</th>
               </tr>
             </thead>
             <tbody>
               {concerts.length > 0 ? (
-                concerts.map(({ date }, index) => (
-                  <tr key={`${date}-${index}`}>
-                    <td>{date}</td>
+                concerts.map(({ date, repertoire, performers }, index) => (
+                  <tr key={`${date}-${repertoire}-${performers}-${index}`}>
+                    <td>{date || "TBD"}</td>
+                    <td>{repertoire || "TBD"}</td>
+                    <td>{performers || "TBD"}</td>
                     <td>
                       <Link
                         href={{
                           pathname: "/booking",
-                          query: { date }
+                          query: { date: date || "TBD" }
                         }}
                         className="book-btn"
                         style={{ display: "inline-block", textDecoration: "none" }}
@@ -181,7 +193,7 @@ export default function Schedule({ concerts, hasLoadError }) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={2}>No concert dates are available right now. Please check the sheet link above.</td>
+                  <td colSpan={4}>No concert details are available right now. Please check the sheet link above.</td>
                 </tr>
               )}
             </tbody>
