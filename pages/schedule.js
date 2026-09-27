@@ -2,118 +2,188 @@ import React from "react";
 import ResponsiveContainer from "../components/ResponsiveContainer";
 import Link from "next/link";
 
-// Sundays in March-May
-const months2 = ["March", "April", "May"];
-const venues = [
-  "The Royal Foundation of St Katharine",
-  "test",
-  "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
-  "The Royal Foundation of St Katharine",
-];
+const SCHEDULE_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEP4_qu1WFQ9JqiKTu_ILKCWmxbzZXL1RO5rOZSYBGjLs0lHgFFz0T4yWJlh7rmagQsLjHqPNV2wTd/pub?output=csv";
+const SCHEDULE_SHEET_URL = SCHEDULE_CSV_URL.replace("/pub?output=csv", "/pubhtml");
 
-function getSundays(month, year) {
-  // Get all Sundays in a month
-  const sundays = [];
-  const date = new Date(year, month, 1);
-  while (date.getMonth() === month) {
-    if (date.getDay() === 0) {
-      sundays.push(new Date(date));
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n" || char === "\r") {
+      row.push(field);
+      if (row.some(cell => cell.trim() !== "")) {
+        rows.push(row);
+      }
+      row = [];
+      field = "";
+      if (char === "\r" && text[i + 1] === "\n") {
+        i += 1;
+      }
+    } else {
+      field += char;
     }
-    date.setDate(date.getDate() + 1);
   }
-  return sundays.map(d =>
-    d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    })
-  );
+
+  row.push(field);
+  if (row.some(cell => cell.trim() !== "")) {
+    rows.push(row);
+  }
+
+  return rows;
 }
 
-export default function Schedule() {
-  const currentYear = new Date().getFullYear();
-  // Generate all events
-  const events = [];
-  months2.forEach((month, idx) => {
-    const sundays = getSundays(idx + 2, currentYear); // March=2, next calendar year
-    events.push(...sundays.map(date => ({ date, venue: venues[(idx + 3) % venues.length] })));
-  });
+function isLikelyDateText(value) {
+  if (!value) return false;
+  return !Number.isNaN(Date.parse(value));
+}
 
-	// Exclude events where the date string starts with "28" (any language, any format)
-	let filteredEvents = events.filter(({ date }) => {
-	  // Exclude if date starts with 28, or contains 17, 24, or 31 as a whole word (to avoid language issues)
-	  return (
-		!/^28(\D|$)/.test(date.trim()) &&
-		!/\b(1|8|24|31)\b/.test(date)
-	  );
-	});
+function extractConcerts(rows) {
+  if (!rows.length) return [];
+
+  const [header, ...dataRows] = rows;
+  const dateColumnIndex = header.findIndex(cell => {
+    const normalized = cell.trim().toLowerCase();
+    return (
+      normalized === "date" ||
+      normalized === "concert date" ||
+      normalized === "concert dates" ||
+      normalized === "date of concert"
+    );
+  });
+  let rowsToUse = dataRows;
+  let dateIndex = dateColumnIndex;
+
+  if (dateColumnIndex < 0) {
+    const firstColumnValues = rows
+      .map(row => (row[0] || "").trim())
+      .filter(Boolean);
+
+    if (firstColumnValues.length > 0 && firstColumnValues.every(isLikelyDateText)) {
+      rowsToUse = rows;
+      dateIndex = 0;
+    } else {
+      return [];
+    }
+  }
+
+  return rowsToUse
+    .map(row => (row[dateIndex] || "").trim())
+    .filter(Boolean)
+    .map(date => ({ date }));
+}
+
+export async function getStaticProps() {
+  try {
+    const response = await fetch(SCHEDULE_CSV_URL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status}`);
+    }
+
+    const csvText = await response.text();
+    const concerts = extractConcerts(parseCsv(csvText));
+
+    return {
+      props: {
+        concerts,
+        hasLoadError: false
+      },
+      revalidate: 3600
+    };
+  } catch (error) {
+    return {
+      props: {
+        concerts: [],
+        hasLoadError: true
+      },
+      revalidate: 3600
+    };
+  }
+}
+
+export default function Schedule({ concerts, hasLoadError }) {
 
   return (
     <ResponsiveContainer>
       <div className="schedule-root">
-        <h1 className="club-title">Event Schedule</h1>
+        <h1 className="club-title">Concert Schedule</h1>
         <Link className="back-link" href="/">← Back to Home</Link>
+
+        <p className="club-description">
+          Concert dates are synced from our published Google Sheet. View the sheet
+          for full repertoire and performer details.
+        </p>
+
+        <a
+          className="book-btn"
+          href={SCHEDULE_SHEET_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "inline-block", marginTop: "0.75em", textDecoration: "none" }}
+        >
+          View Repertoire and Performers (opens in new tab)
+        </a>
+
+        {hasLoadError && (
+          <p className="club-description" style={{ marginTop: "1em" }}>
+            We could not load the latest concert dates right now. Please use the
+            Google Sheet link above.
+          </p>
+        )}
+
         <div className="schedule-table-wrap">
           <table className="schedule-table">
             <thead>
               <tr>
-                <th>Date (at 2pm)</th>
-                <th>Venue</th>
-                <th>Works</th>
+                <th>Concert Date</th>
                 <th>Book Tickets</th>
               </tr>
             </thead>
             <tbody>
-              {filteredEvents.map(({ date, venue }, i) => (
-                <tr key={i}>
-                  <td>{date}</td>
-                  <td>{venue}</td>
-                  <td>
-				  {i === 0
-					  ? "Clarinet Trio; Clarinet Sonata Eb major"
-					  : i === 1
-					  ? "Waltzes - piano four hands"
-					  : i === 2
-					  ? "String Sextet Bb major"
-					  : i === 3
-					  ? "No concert, Easter Sunday"
-					  : i === 4
-					  ? "Horn trio"
-					  : i === 5
-					  ? "Cello sonata F major"
-					  : i === 6
-					  ? "Piano quartet C minor; String quartet Bb major"
-					  : i === 7
-					  ? "Piano trio C minor"
-					  : i === 8
-					  ? "Piano trio C major; violin sonata A major"
-					  : i === 9
-					  ? "Piano quartet G minor; violin sonata G major"
-					  : "TBC"}
-				  </td>
-                  <td>
-					{ i === 3 ? (
-						<span style={{ fontWeight: "bold", color: "red" }}>No concert</span>
-					) : (     
-              
-				   <Link
-                      href={{
-                        pathname: "/booking",
-                        query: { date }
-                      }}
-                      className="book-btn"
-                      style={{ display: "inline-block", textDecoration: "none" }}
-                    >
-                      Book Tickets
-                    </Link>
-					 )}
-                  </td>
+              {concerts.length > 0 ? (
+                concerts.map(({ date }, index) => (
+                  <tr key={`${date}-${index}`}>
+                    <td>{date}</td>
+                    <td>
+                      <Link
+                        href={{
+                          pathname: "/booking",
+                          query: { date }
+                        }}
+                        className="book-btn"
+                        style={{ display: "inline-block", textDecoration: "none" }}
+                      >
+                        Book Tickets
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2}>No concert dates are available right now. Please check the sheet link above.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
