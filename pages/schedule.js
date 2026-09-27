@@ -58,7 +58,10 @@ function extractConcerts(rows) {
   if (!rows.length) return [];
 
   const [header, ...dataRows] = rows;
-  const dateColumnIndex = header.findIndex(cell => /date/i.test(cell.trim()));
+  const dateColumnIndex = header.findIndex(cell => {
+    const normalized = cell.trim().toLowerCase();
+    return normalized === "date" || normalized === "concert date" || normalized === "concert dates";
+  });
   const rowsToUse = dateColumnIndex >= 0 ? dataRows : rows;
   const dateIndex = dateColumnIndex >= 0 ? dateColumnIndex : 0;
 
@@ -140,7 +143,7 @@ export default function Schedule({ concerts, hasLoadError }) {
                 ))
               ) : (
                 <tr>
-                  <td>No concert dates are available right now. Please check the sheet link above.</td>
+                  <td colSpan={1}>No concert dates are available right now. Please check the sheet link above.</td>
                 </tr>
               )}
             </tbody>
