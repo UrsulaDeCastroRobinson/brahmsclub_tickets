@@ -71,7 +71,7 @@ function extractConcerts(rows) {
     .map(date => ({ date }));
 }
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
   try {
     const response = await fetch(SCHEDULE_CSV_URL);
     if (!response.ok) {
@@ -85,14 +85,16 @@ export async function getServerSideProps() {
       props: {
         concerts,
         hasLoadError: false
-      }
+      },
+      revalidate: 3600
     };
   } catch (error) {
     return {
       props: {
         concerts: [],
         hasLoadError: true
-      }
+      },
+      revalidate: 3600
     };
   }
 }
@@ -132,6 +134,7 @@ export default function Schedule({ concerts, hasLoadError }) {
             <thead>
               <tr>
                 <th>Concert Date</th>
+                <th>Book Tickets</th>
               </tr>
             </thead>
             <tbody>
@@ -139,11 +142,23 @@ export default function Schedule({ concerts, hasLoadError }) {
                 concerts.map(({ date }, index) => (
                   <tr key={`${date}-${index}`}>
                     <td>{date}</td>
+                    <td>
+                      <Link
+                        href={{
+                          pathname: "/booking",
+                          query: { date }
+                        }}
+                        className="book-btn"
+                        style={{ display: "inline-block", textDecoration: "none" }}
+                      >
+                        Book Tickets
+                      </Link>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={1}>No concert dates are available right now. Please check the sheet link above.</td>
+                  <td colSpan={2}>No concert dates are available right now. Please check the sheet link above.</td>
                 </tr>
               )}
             </tbody>
