@@ -1,15 +1,7 @@
 {
-  "generatedAt": "2026-09-21T06:17:21.480Z",
+  "generatedAt": "2026-09-28T06:17:34.732Z",
   "month": "September 2026–March 2027",
   "items": [
-    {
-      "title": "Barry Douglas piano",
-      "date": "2026-09-21",
-      "venue": "Wigmore Hall",
-      "source": "Wigmore Hall",
-      "programme": "Capriccio in D minor Op. 116 No. 1 / Intermezzo in E Op. 116 No. 4 / Capriccio in D minor Op. 116 No. 7",
-      "url": "https://www.wigmore-hall.org.uk/whats-on/202609211300"
-    },
     {
       "title": "Sol Gabetta cello; Kristian Bezuidenhout piano",
       "date": "2026-10-05",
@@ -23,7 +15,7 @@
       "date": "2026-10-07",
       "venue": "Wigmore Hall",
       "source": "Wigmore Hall",
-      "programme": "Deutsche Volkslieder WoO. 33 / : / Fünf Lieder Op. 49",
+      "programme": "In stiller Nacht WoO. 33 No. 42 / Wiegenlied Op. 49 No. 4 / Schwesterlein, Schwesterlein WoO. 33 No. 15",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202610071300"
     },
     {
@@ -103,7 +95,7 @@
       "date": "2026-12-30",
       "venue": "Wigmore Hall",
       "source": "Wigmore Hall",
-      "programme": "Selection of Klavierstücke and Intermezzi",
+      "programme": "7 Fantasien Op. 116 / : / 6 Klavierstücke Op. 118 / Capriccio in B minor Op. 76 No. 2 / 3 Intermezzi Op. 117",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202612301930"
     },
     {
@@ -129,6 +121,14 @@
       "source": "Wigmore Hall",
       "programme": "Variations and Fugue on a Theme of Handel Op. 24",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202701111930"
+    },
+    {
+      "title": "ECMA Showcase: Astatine Trio",
+      "date": "2027-01-22",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Piano Trio No. 1 in B major, Op. 8",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202701221300"
     }
   ]
 }
