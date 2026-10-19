@@ -1,15 +1,7 @@
 {
-  "generatedAt": "2026-10-12T06:20:26.885Z",
+  "generatedAt": "2026-10-19T06:16:25.218Z",
   "month": "October 2026–April 2027",
   "items": [
-    {
-      "title": "Elena Urioste violin; Tom Poster piano",
-      "date": "2026-10-12",
-      "venue": "Wigmore Hall",
-      "source": "Wigmore Hall",
-      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
-      "url": "https://www.wigmore-hall.org.uk/whats-on/202610121300"
-    },
     {
       "title": "Soloists of the Kronberg Academy; Kirill Gerstein piano",
       "date": "2026-10-25",
@@ -121,6 +113,62 @@
       "source": "Wigmore Hall",
       "programme": "Piano Trio No. 1 in B major, Op. 8",
       "url": "https://www.wigmore-hall.org.uk/whats-on/202701221300"
+    },
+    {
+      "title": "Arcadia Quartet",
+      "date": "2027-02-07",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "String Quartet No. 1 in C minor, Op. 51 No. 1",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702071130"
+    },
+    {
+      "title": "Sergey Khachatryan violin; Alexandre Kantorow piano",
+      "date": "2027-02-10",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Violin Sonata No. 3 in D minor, Op. 108",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702101930"
+    },
+    {
+      "title": "Jerusalem Quartet; Pierre Génisson clarinet",
+      "date": "2027-02-17",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Clarinet Quintet in B minor, Op. 115",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702171930"
+    },
+    {
+      "title": "Jerusalem Quartet",
+      "date": "2027-02-18",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "String Quartet No. 1 in C minor, Op. 51 No. 1",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702181930"
+    },
+    {
+      "title": "Florian Boesch baritone; Malcolm Martineau piano",
+      "date": "2027-02-26",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "4 Serious Songs Op. 121",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702261930"
+    },
+    {
+      "title": "Tabea Zimmermann viola; Jean-Guihen Queyras cello; Javier Perianes piano",
+      "date": "2027-02-28",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "4 Balladen und Romanzen Op. 75 / 3 Intermezzi Op. 117 / Clarinet Trio in A minor, Op. 114",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202702281930"
+    },
+    {
+      "title": "Matteo Cimatti violin; Francesco Granata piano",
+      "date": "2027-03-02",
+      "venue": "Wigmore Hall",
+      "source": "Wigmore Hall",
+      "programme": "Violin Sonata No. 1 in G major, Op. 78",
+      "url": "https://www.wigmore-hall.org.uk/whats-on/202703021300"
     }
   ]
 }
